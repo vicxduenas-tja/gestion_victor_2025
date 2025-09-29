@@ -1,0 +1,29 @@
+# Archivos de configuración local
+config/database.php
+
+# Archivos temporales
+*.log
+*.tmp
+*.cache
+
+# Carpetas de dependencias
+vendor/
+node_modules/
+
+# Archivos del sistema
+.DS_Store
+Thumbs.db
+
+# Archivos de IDE
+.vscode/
+.idea/
+*.sublime-*
+
+# Archivos subidos por usuarios
+uploads/*
+!uploads/.gitkeep
+
+# Copias de seguridad
+*.bak
+*.backup
+*~

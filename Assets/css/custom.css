@@ -1,0 +1,9 @@
+/* Para que la imagen de fondo cubra todo el espacio del contenedor */
+.app-auth-background {
+  background-size: cover !important;
+}
+
+/* Para que el panel de la izquierda (con la imagen) sea más ancho que el formulario */
+.app-auth-sign-in .app-auth-background {
+  flex: 1; /* Puedes ajustar este valor. Un valor de 1.5 lo hará 50% más ancho que el formulario. */
+}
