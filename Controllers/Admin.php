@@ -35,6 +35,11 @@ class Admin extends Controller
         $data['script'] = 'files.js';
         $data['active'] = 'recent';
         $data['menu'] = 'admin';
+        
+        require_once 'Models/CalendarioModel.php';
+        $calendarioModel = new CalendarioModel();
+        $data['docs_pendientes'] = $calendarioModel->contarPendientes($this->id_usuario);// Temporal hardcodeado
+
         $carpetas = $this->model->getCarpetas($this->id_usuario);
         $data['archivos'] = $this->model->getArchivosRecientes($this->id_usuario);
         for ($i = 0; $i < count($carpetas); $i++) {

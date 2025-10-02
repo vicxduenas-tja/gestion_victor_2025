@@ -21,6 +21,11 @@ class Usuarios extends Controller
         $data['script'] = 'usuarios.js';
         $data['menu'] = 'usuarios';
         $data['shares'] = $this->model->verificarEstado($this->correo);
+        
+        require_once 'Models/CalendarioModel.php';
+        $calendarioModel = new CalendarioModel();
+        $data['docs_pendientes'] = $calendarioModel->contarPendientes($this->id_usuario);
+        
         $this->views->getView('usuarios', 'index', $data);
     }
 

@@ -22,6 +22,11 @@ class Compartidos extends Controller
         $data['menu'] = 'share';
         $data['archivos'] = $this->model->getArchivosCompartidos($this->correo);
         $data['shares'] = $this->model->verificarEstado($this->correo);
+        
+        require_once 'Models/CalendarioModel.php';
+        $calendarioModel = new CalendarioModel();
+        $data['docs_pendientes'] = $calendarioModel->contarPendientes($this->id_usuario);
+        
         $this->views->getView('admin', 'compartidos', $data);
     }
 
