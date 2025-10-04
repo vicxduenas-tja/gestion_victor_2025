@@ -19,11 +19,13 @@ class CalendarioModel extends Query
                     d.prioridad,
                     d.estado,
                     c.nombre as carpeta,
-                    CONCAT(u.nombre, ' ', u.apellido) as usuario_asignado
+                    COALESCE(CONCAT(u.nombre, ' ', u.apellido), o.nombre) as usuario_asignado
                 FROM documentos_oficiales d
                 LEFT JOIN carpetas c ON d.id_carpeta = c.id
                 LEFT JOIN usuarios u ON d.id_usuario_asignado = u.id
-                WHERE d.id_usuario_asignado = $id_usuario 
+                LEFT JOIN oficinas o ON d.id_oficina_destino = o.id
+                WHERE (d.id_usuario_asignado = $id_usuario 
+                       OR d.id_oficina_destino = (SELECT id_oficina FROM usuarios WHERE id = $id_usuario))
                 AND d.estado IN ('pendiente', 'completado')
                 ORDER BY d.fecha_limite ASC";
         

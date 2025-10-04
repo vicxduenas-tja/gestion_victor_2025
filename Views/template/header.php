@@ -69,7 +69,12 @@
                     <li class="<?php echo ($data['menu'] == 'admin') ? 'active-page' : ''; ?>">
                         <a href="<?php echo BASE_URL . 'admin'; ?>" class="<?php echo ($data['menu'] == 'admin') ? 'active' : ''; ?>"><i class="material-icons-two-tone">cloud_queue</i>Adm. de archivos</a>
                     </li>
-
+                    
+                    <li class="<?php echo (isset($data['menu']) && $data['menu'] == 'hoja_ruta') ? 'active-page' : ''; ?>">
+                        <a href="<?php echo BASE_URL . 'hojaruta'; ?>" class="<?php echo (isset($data['menu']) && $data['menu'] == 'hoja_ruta') ? 'active' : ''; ?>">
+                            <i class="material-icons-two-tone">folder_open</i>Hojas de Ruta
+                        </a>
+                    </li>
 
                     <li>
                         <a href="<?php echo BASE_URL . 'calendario'; ?>"><i class="material-icons-two-tone">calendar_today</i>Calendario<span class="badge rounded-pill badge-success float-end"><?php echo isset($data['docs_pendientes']) ? $data['docs_pendientes'] : 0; ?></span></a>
