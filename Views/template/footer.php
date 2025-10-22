@@ -20,10 +20,9 @@
 <script type="text/javascript" src="<?php echo BASE_URL . 'Assets/plugins/DataTables/datatables.min.js'; ?>"></script>
 <script src="<?php echo BASE_URL . 'Assets/js/custom.js'; ?>"></script>
 <script src="https://unpkg.com/dropzone@5/dist/min/dropzone.min.js"></script>
+
 <?php if (!empty($data['script'])) { ?>
-
-    <script src="<?php echo BASE_URL . 'Assets/js/pages/' . $data['script']; ?>"></script>
-
+    <script src="<?php echo BASE_URL . 'Assets/js/pages/' . $data['script']; ?>?v=<?php echo time(); ?>"></script>
 <?php } ?>
 
 </body>

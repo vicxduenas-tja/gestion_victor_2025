@@ -21,33 +21,36 @@ class Usuarios extends Controller
         $data['script'] = 'usuarios.js';
         $data['menu'] = 'usuarios';
         $data['shares'] = $this->model->verificarEstado($this->correo);
-        
+
         require_once 'Models/CalendarioModel.php';
         $calendarioModel = new CalendarioModel();
         $data['docs_pendientes'] = $calendarioModel->contarPendientes($this->id_usuario);
-        
+
         $this->views->getView('usuarios', 'index', $data);
     }
 
     public function listar()
     {
         $data = $this->model->getUsuarios();
+
         for ($i = 0; $i < count($data); $i++) {
+            // Generar botones de acciones
             if ($data[$i]['id'] == 1) {
-                $data[$i]['acciones'] = 'SUPER ADMIN';
+                // Super Admin: sin botones de acción
+                $data[$i]['acciones'] = '<div class="d-flex">
+                <span class="badge bg-secondary">Protegido</span>
+            </div>';
             } else {
-                $data[$i]['acciones'] = '<div>
-                    <a href="#" class="btn btn-info btn-sm" onclick="editar(' . $data[$i]['id'] . ')">
-                        Editar 
-                    </a>
-                    <a href="#" class="btn btn-danger btn-sm" onclick="eliminar(' . $data[$i]['id'] . ')">
-                        Eliminar
-                    </a>
-                </div>';
+                // Usuarios normales: editar y eliminar
+                $data[$i]['acciones'] = '<div class="d-flex">
+                <button class="btn btn-primary btn-sm" type="button" onclick="editar(' . $data[$i]['id'] . ')"><i class="material-icons">edit</i></button>
+                <button class="btn btn-danger btn-sm" type="button" onclick="eliminar(' . $data[$i]['id'] . ')"><i class="material-icons">delete</i></button>
+            </div>';
             }
 
             $data[$i]['nombres'] = $data[$i]['nombre'] . ' ' . $data[$i]['apellido'];
         }
+
         echo json_encode($data, JSON_UNESCAPED_UNICODE);
         die();
     }
@@ -62,6 +65,9 @@ class Usuarios extends Controller
         $clave = $_POST['clave'];
         $rol = $_POST['rol'];
         $id_usuario = $_POST['id_usuario'];
+        $id_oficina = !empty($_POST['id_oficina']) ? $_POST['id_oficina'] : null;
+        $cargo = $_POST['cargo'];
+
         if (
             empty($nombre) || empty($apellido) || empty($correo) || empty($telefono) ||
             empty($direccion) || empty($clave) || empty($rol)
@@ -69,14 +75,13 @@ class Usuarios extends Controller
             $res = array('tipo' => 'warning', 'mensaje' => 'Todos los campos son obligatorios');
         } else {
             if ($id_usuario == '') {
-                ###comprobar si existe correo
+                // CREAR NUEVO USUARIO
                 $verificarCorreo = $this->model->getVerificar('correo', $correo, 0);
                 if (empty($verificarCorreo)) {
-                    ##comprobar si existe telefono
                     $verificarTel = $this->model->getVerificar('telefono', $telefono, 0);
                     if (empty($verificarTel)) {
                         $hash = password_hash($clave, PASSWORD_DEFAULT);
-                        $data = $this->model->registrar($nombre, $apellido, $correo, $telefono, $direccion, $hash, $rol);
+                        $data = $this->model->registrar($nombre, $apellido, $correo, $telefono, $direccion, $hash, $rol, $id_oficina, $cargo);
                         if ($data > 0) {
                             $res = array('tipo' => 'success', 'mensaje' => 'Usuario registrado correctamente');
                         } else {
@@ -89,14 +94,12 @@ class Usuarios extends Controller
                     $res = array('tipo' => 'warning', 'mensaje' => 'El correo ya existe');
                 }
             } else {
-                ###comprobar si existe correo
+                // MODIFICAR USUARIO EXISTENTE
                 $verificarCorreo = $this->model->getVerificar('correo', $correo, $id_usuario);
                 if (empty($verificarCorreo)) {
-                    ##comprobar si existe telefono
                     $verificarTel = $this->model->getVerificar('telefono', $telefono, $id_usuario);
                     if (empty($verificarTel)) {
-                        $hash = password_hash($clave, PASSWORD_DEFAULT);
-                        $data = $this->model->modificar($nombre, $apellido, $correo, $telefono, $direccion, $rol, $id_usuario);
+                        $data = $this->model->modificar($nombre, $apellido, $correo, $telefono, $direccion, $rol, $id_oficina, $cargo, $id_usuario);
                         if ($data == 1) {
                             $res = array('tipo' => 'success', 'mensaje' => 'Usuario modificado');
                         } else {
@@ -116,11 +119,18 @@ class Usuarios extends Controller
 
     public function delete($id)
     {
+        // Proteger Super Admin
+        if ($id == 1) {
+            $res = array('tipo' => 'error', 'mensaje' => 'No se puede eliminar al Super Admin');
+            echo json_encode($res, JSON_UNESCAPED_UNICODE);
+            die();
+        }
+
         $data = $this->model->delete($id);
         if ($data == 1) {
-            $res = array('tipo' => 'success', 'mensaje' => 'Usuario dado de baja');
+            $res = array('tipo' => 'success', 'mensaje' => 'Usuario eliminado');
         } else {
-            $res = array('tipo' => 'warning', 'mensaje' => 'Error al eliminar el usuario');
+            $res = array('tipo' => 'error', 'mensaje' => 'Error al eliminar el usuario');
         }
         echo json_encode($res, JSON_UNESCAPED_UNICODE);
         die();
@@ -185,7 +195,7 @@ class Usuarios extends Controller
             $res = array('tipo' => 'warning', 'mensaje' => 'Todos los campos son requeridos');
         } else {
             $usuario = $this->model->getUsuario($this->id_usuario);
-            $data = $this->model->modificar($nombre, $apellido, $correo, $telefono, $direccion, $usuario['rol'],$this->id_usuario);
+            $data = $this->model->modificar($nombre, $apellido, $correo, $telefono, $direccion, $usuario['rol'], $this->id_usuario);
             if ($data == 1) {
                 $res = array('tipo' => 'success', 'mensaje' => 'Datos Modificados');
             } else {
@@ -201,5 +211,13 @@ class Usuarios extends Controller
     {
         session_destroy();
         header('Location: ' . BASE_URL);
+    }
+
+    // Listar oficinas para el formulario
+    public function listarOficinas()
+    {
+        $sql = "SELECT id, nombre FROM oficinas WHERE estado = 1 ORDER BY nombre";
+        $data = $this->model->selectAll($sql);
+        echo json_encode($data);
     }
 }

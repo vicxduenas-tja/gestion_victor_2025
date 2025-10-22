@@ -3,6 +3,73 @@
 <!-- CSS de FullCalendar -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
 
+<style>
+    /* Estilos mínimos para el stepper de Bootstrap */
+    .stepper-item {
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        flex: 1;
+    }
+
+    .stepper-item::before {
+        position: absolute;
+        content: "";
+        border-bottom: 2px solid #dee2e6;
+        width: 100%;
+        top: 20px;
+        left: -50%;
+        z-index: 0;
+    }
+
+    .stepper-item::after {
+        position: absolute;
+        content: "";
+        border-bottom: 2px solid #dee2e6;
+        width: 100%;
+        top: 20px;
+        left: 50%;
+        z-index: 0;
+    }
+
+    .stepper-item .step-counter {
+        position: relative;
+        z-index: 1;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #dee2e6;
+        margin-bottom: 6px;
+    }
+
+    .stepper-item.active .step-counter {
+        background-color: #0d6efd;
+        color: white;
+        font-weight: bold;
+    }
+
+    .stepper-item.completed .step-counter {
+        background-color: #198754;
+        color: white;
+    }
+
+    .stepper-item:first-child::before {
+        content: none;
+    }
+
+    .stepper-item:last-child::after {
+        content: none;
+    }
+</style>
+
+
+
+
+
 <div class="container-fluid mt-4">
     <div class="row">
         <div class="col-12">
@@ -38,7 +105,7 @@
                             <button type="button" class="btn btn-sm btn-outline-warning" onclick="filtrarPrioridad('media')">Media</button>
                             <button type="button" class="btn btn-sm btn-outline-success" onclick="filtrarPrioridad('baja')">Baja</button>
                         </div>
-                        
+
                         <strong class="ms-4">Filtrar por estado:</strong>
                         <div class="btn-group ms-2" role="group">
                             <button type="button" class="btn btn-sm btn-outline-info" onclick="filtrarEstado('completados')">Completados</button>
@@ -51,53 +118,9 @@
             </div>
         </div>
     </div>
-    <!-- Modal para detalles del documento -->
-    <div class="modal fade" id="modalDetalleDoc" tabindex="-1">
-        <div class="modal-dialog">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title">Detalle del Documento</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                </div>
-                <div class="modal-body">
-                    <div class="mb-3">
-                        <strong>Número:</strong>
-                        <p id="modalNumero"></p>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Asunto:</strong>
-                        <p id="modalAsunto"></p>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Fecha Límite:</strong>
-                        <p id="modalFecha"></p>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Prioridad:</strong>
-                        <span id="modalPrioridad" class="badge"></span>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Estado:</strong>
-                        <span id="modalEstado" class="badge bg-secondary"></span>
-                    </div>
-                    <div class="mb-3" id="divFechaCompletado" style="display: none;">
-                        <strong>Fecha Completado:</strong>
-                        <p id="modalFechaCompletado" class="text-success fw-bold"></p>
-                    </div>
-                    <div class="mb-3">
-                        <strong>Carpeta:</strong>
-                        <p id="modalCarpeta"></p>
-                    </div>
-                </div>
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-success" id="btnCompletarTarea" onclick="completarTarea()">
-                        <i class="fas fa-check"></i> Tarea Completada
-                    </button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
+
+
+
     <!-- Modal para crear nuevo documento -->
     <div class="modal fade" id="modalNuevoDoc" tabindex="-1">
         <div class="modal-dialog">
@@ -138,27 +161,213 @@
         </div>
     </div>
 
-    <!-- Modal de confirmación al completar tarea -->
-    <div class="modal fade" id="modalConfirmarArchivo" tabindex="-1">
-        <div class="modal-dialog modal-dialog-centered">
+    <!-- MODAL 1: Ver Detalles del Documento -->
+    <div class="modal fade" id="modalVerDetalles" tabindex="-1">
+        <div class="modal-dialog modal-lg">
             <div class="modal-content">
-                <div class="modal-header bg-success text-white">
-                    <h5 class="modal-title">Tarea Completada</h5>
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-file-alt"></i> Detalle de Hoja de Ruta
+                    </h5>
                     <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
                 </div>
-                <div class="modal-body text-center">
-                    <i class="fas fa-check-circle text-success" style="font-size: 48px;"></i>
-                    <h5 class="mt-3">¿Desea archivar este documento en Documentos Personales?</h5>
-                    <p class="text-muted">El documento se moverá a Adm. de Archivos</p>
+                <div class="modal-body">
+                    <!-- Indicador de progreso -->
+                    <div class="d-flex justify-content-between mb-4" id="stepperDetalles">
+                        <div class="stepper-item completed">
+                            <div class="step-counter">1</div>
+                            <div class="step-name">Delegado</div>
+                        </div>
+                        <div class="stepper-item active">
+                            <div class="step-counter">2</div>
+                            <div class="step-name">En Progreso</div>
+                        </div>
+                        <div class="stepper-item">
+                            <div class="step-counter">3</div>
+                            <div class="step-name">Respuesta</div>
+                        </div>
+                        <div class="stepper-item">
+                            <div class="step-counter">4</div>
+                            <div class="step-name">Completado</div>
+                        </div>
+                    </div>
+
+                    <hr>
+
+                    <!-- Información del documento -->
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <small class="text-muted d-block">N° Documento</small>
+                            <strong id="detNumDoc"></strong>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <small class="text-muted d-block">Estado</small>
+                            <span id="detEstado" class="badge"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <small class="text-muted d-block">Fecha de Recepción</small>
+                            <span id="detFechaRecep"></span>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <small class="text-muted d-block">Fecha Límite</small>
+                            <span id="detFechaLim" class="text-danger fw-bold"></span>
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <small class="text-muted d-block">Prioridad</small>
+                            <span id="detPrioridad" class="badge"></span>
+                        </div>
+                        <div class="col-md-6 mb-3" id="divRemitente">
+                            <small class="text-muted d-block">Remitente</small>
+                            <span id="detRemitente"></span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block">Asunto</small>
+                        <div id="detAsunto" class="p-3 bg-light rounded"></div>
+                    </div>
+
+                    <div class="mb-3" id="divObservaciones" style="display: none;">
+                        <small class="text-muted d-block">Observaciones</small>
+                        <div id="detObservaciones" class="p-3 bg-light rounded text-muted"></div>
+                    </div>
+
+                    <hr>
+
+                    <div class="mb-3">
+                        <small class="text-muted d-block mb-2">Documento Original</small>
+                        <div class="d-flex gap-2">
+                            <button type="button" class="btn btn-sm btn-outline-primary" onclick="abrirPDFNuevaPestana()">
+                                <i class="fas fa-external-link-alt"></i> Abrir PDF
+                            </button>
+                            <a id="btnDescargar" href="#" download class="btn btn-sm btn-outline-success">
+                                <i class="fas fa-download"></i> Descargar
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Preview del documento original (siempre visible) -->
+                    <div class="mt-3">
+                        <small class="text-muted d-block mb-2"><strong>Vista Previa del Documento:</strong></small>
+                        <iframe id="iframePreviewOriginal" style="width: 100%; height: 450px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                    </div>
                 </div>
-                <div class="modal-footer justify-content-center">
-                    <button type="button" class="btn btn-success" onclick="confirmarArchivo(true)">
-                        <i class="fas fa-check"></i> Sí, Archivar
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cancelar
                     </button>
-                    <button type="button" class="btn btn-secondary" onclick="confirmarArchivo(false)">
-                        <i class="fas fa-times"></i> No, Solo Completar
+                    <button type="button" class="btn btn-success" id="btnResponder" onclick="abrirModalResponder()">
+                        <i class="fas fa-reply"></i> Responder
                     </button>
                 </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL 2: Responder Tarea -->
+    <div class="modal fade" id="modalResponder" tabindex="-1" data-bs-backdrop="static">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header bg-success text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-reply"></i> Responder Hoja de Ruta
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <form id="formResponder" enctype="multipart/form-data">
+                    <input type="hidden" id="idDocResp" name="id_documento">
+                    <div class="modal-body">
+                        <!-- Indicador de progreso -->
+                        <div class="d-flex justify-content-between mb-4">
+                            <div class="stepper-item completed">
+                                <div class="step-counter">1</div>
+                                <div class="step-name">Delegado</div>
+                            </div>
+                            <div class="stepper-item completed">
+                                <div class="step-counter">2</div>
+                                <div class="step-name">En Progreso</div>
+                            </div>
+                            <div class="stepper-item active">
+                                <div class="step-counter">3</div>
+                                <div class="step-name">Respondiendo</div>
+                            </div>
+                            <div class="stepper-item">
+                                <div class="step-counter">4</div>
+                                <div class="step-name">Completado</div>
+                            </div>
+                        </div>
+
+                        <hr>
+
+                        <div class="alert alert-info">
+                            <i class="fas fa-info-circle"></i>
+                            <strong>N° Documento:</strong> <span id="respNumDoc"></span>
+                        </div>
+
+                        <!-- Subir archivo de respuesta -->
+                        <div class="mb-3">
+                            <label class="form-label">
+                                <strong>Archivo de Respuesta (PDF) *</strong>
+                            </label>
+                            <div class="d-flex gap-2">
+                                <input type="file" class="form-control" id="archivoRespuesta" name="archivo_respuesta"
+                                    accept=".pdf" required onchange="mostrarInfoArchivo()">
+                                <button type="button" class="btn btn-outline-danger btn-sm" id="btnQuitarArchivo"
+                                    onclick="quitarArchivo()" style="display: none;" title="Quitar archivo">
+                                    <span class="material-icons" style="font-size: 20px;">close</span>
+                                </button>
+                            </div>
+                            <small class="text-muted">Solo archivos PDF. Tamaño máximo: 10MB</small>
+                        </div>
+
+                        <!-- Info del archivo cargado -->
+                        <div id="infoArchivo" class="alert alert-success" style="display: none;">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-file-pdf text-danger"></i>
+                                    <strong id="nombreArchivo"></strong>
+                                    <span id="tamañoArchivo" class="text-muted ms-2"></span>
+                                </div>
+                                <div class="text-end">
+                                    <small class="text-muted d-block">Fecha y hora de respuesta:</small>
+                                    <strong id="fechaHoraRespuesta"></strong>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Preview del PDF -->
+                        <div id="previewPDF" style="display: none;">
+                            <label class="form-label"><strong>Vista previa:</strong></label>
+                            <iframe id="iframePreview" style="width: 100%; height: 400px; border: 1px solid #dee2e6; border-radius: 4px;"></iframe>
+                        </div>
+
+                        <!-- Comentarios opcionales -->
+                        <div class="mb-3 mt-3">
+                            <label class="form-label">
+                                <strong>Comentarios</strong> (Opcional)
+                            </label>
+                            <textarea class="form-control" id="comentariosResp" name="comentarios"
+                                rows="3" placeholder="Agregue comentarios sobre su respuesta..."></textarea>
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                            <i class="fas fa-times"></i> Cancelar
+                        </button>
+                        <button type="button" class="btn btn-primary" onclick="confirmarCompletado(false)">
+                            <i class="fas fa-check"></i> Solo Completar
+                        </button>
+                        <button type="button" class="btn btn-success" onclick="confirmarCompletado(true)">
+                            <i class="fas fa-archive"></i> Archivar y Completar
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
     </div>
@@ -208,6 +417,8 @@
                                     estado: doc.estado,
                                     carpeta: doc.carpeta,
                                     fecha_completado: doc.fecha_completado,
+                                    fecha_recepcion: doc.fecha_recepcion,
+                                    archivo_adjunto: doc.archivo_adjunto
                                 }
                             };
                         });
@@ -225,72 +436,12 @@
         console.log('Calendario listo');
     });
 
-    // Función para color según prioridad
     function obtenerColor(prioridad, estado) {
-        if (estado === 'completado') return '#dfe1e4ff'; // Gris para completados
+        if (estado === 'completado' || estado === 'archivado') return '#dfe1e4ff'; // Gris para completados
         if (prioridad === 'alta') return '#dc3545';
         if (prioridad === 'media') return '#ffc107';
         if (prioridad === 'baja') return '#28a745';
         return '#007bff';
-    }
-
-    // Mostrar detalle del documento
-    function mostrarDetalleDocumento(evento) {
-        // Guardar ID del documento para usarlo en los botones
-        window.documentoActual = evento.id;
-        // Extraer número y asunto del título
-        var partes = evento.title.split(': ');
-        var numero = partes[0];
-        var asunto = partes.slice(1).join(': ');
-
-        // Llenar el modal
-        document.getElementById('modalNumero').textContent = numero;
-        document.getElementById('modalAsunto').textContent = asunto;
-        document.getElementById('modalFecha').textContent = evento.start.toLocaleDateString('es-ES');
-        document.getElementById('modalCarpeta').textContent = evento.extendedProps.carpeta;
-
-        // Prioridad con badge de color
-        var badgePrioridad = document.getElementById('modalPrioridad');
-        badgePrioridad.textContent = evento.extendedProps.prioridad.toUpperCase();
-        badgePrioridad.className = 'badge';
-        if (evento.extendedProps.prioridad === 'alta') {
-            badgePrioridad.classList.add('bg-danger');
-        } else if (evento.extendedProps.prioridad === 'media') {
-            badgePrioridad.classList.add('bg-warning');
-        } else {
-            badgePrioridad.classList.add('bg-success');
-        }
-
-        // Estado
-        document.getElementById('modalEstado').textContent = evento.extendedProps.estado.toUpperCase();
-
-        // Si está completado, mostrar fecha y aplicar estilo
-        var divFechaCompletado = document.getElementById('divFechaCompletado');
-        var btnCompletar = document.getElementById('btnCompletarTarea');
-        
-        if (evento.extendedProps.estado === 'completado') {
-            // Mostrar fecha completado
-            if (evento.extendedProps.fecha_completado) {
-                var fecha = new Date(evento.extendedProps.fecha_completado);
-                document.getElementById('modalFechaCompletado').textContent = 
-                    fecha.toLocaleDateString('es-ES') + ' ' + fecha.toLocaleTimeString('es-ES');
-                divFechaCompletado.style.display = 'block';
-            }
-            
-            // Aplicar estilo opaco al modal
-            document.querySelector('#modalDetalleDoc .modal-body').style.opacity = '0.6';
-            
-            // Ocultar botón de completar tarea
-            btnCompletar.style.display = 'none';
-        } else {
-            // Resetear estilos para documentos pendientes
-            divFechaCompletado.style.display = 'none';
-            document.querySelector('#modalDetalleDoc .modal-body').style.opacity = '1';
-            btnCompletar.style.display = 'inline-block';
-        }
-        // Mostrar el modal
-        var modal = new bootstrap.Modal(document.getElementById('modalDetalleDoc'));
-        modal.show();
     }
 
     // Filtrar por prioridad
@@ -379,63 +530,6 @@
                 alertaPersonalizada('error', 'Error al guardar documento');
             });
     } // Este cierre es del guardarDocumento
-    
-    // Completar tarea
-    function completarTarea() {
-        if (!window.documentoActual) {
-            alertaPersonalizada('error', 'No se pudo identificar el documento');
-            return;
-        }
-        
-        // Cerrar modal de detalles
-        var modalDetalles = bootstrap.Modal.getInstance(document.getElementById('modalDetalleDoc'));
-        modalDetalles.hide();
-        
-        // Mostrar modal de confirmación
-        var modalConfirmar = new bootstrap.Modal(document.getElementById('modalConfirmarArchivo'));
-        modalConfirmar.show();
-    }
-
-    // Confirmar si archivar o no
-    function confirmarArchivo(archivar) {
-        var modal = bootstrap.Modal.getInstance(document.getElementById('modalConfirmarArchivo'));
-        modal.hide();
-        
-        // Enviar al servidor para cambiar estado
-        fetch('<?php echo BASE_URL; ?>calendario/completar', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/x-www-form-urlencoded',
-            },
-            body: 'id=' + window.documentoActual
-        })
-        .then(response => response.json())
-        .then(data => {
-            if (archivar) {
-                alertaPersonalizada('success', 'Tarea completada y archivada');
-            } else {
-                alertaPersonalizada('success', 'Tarea completada');
-            }
-            
-            // Recargar calendario para ver el cambio de color
-            window.calendar.refetchEvents();
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alertaPersonalizada('error', 'Error al completar tarea');
-        });
-    }
-
-    // Archivar documento
-    function archivarDocumento() {
-        if (!window.documentoActual) {
-            alertaPersonalizada('error', 'No se pudo identificar el documento');
-            return;
-        }
-        
-        // Solo notificación por ahora
-        alertaPersonalizada('info', 'Documento enviado a Adm. de Archivos (funcionalidad pendiente)');
-    }
 
     // Filtrar por estado
     function filtrarEstado(estado) {
@@ -444,15 +538,296 @@
             btn.classList.remove('active');
         });
         event.target.classList.add('active');
-        
+
         // Filtrar documentos completados
-        var eventosFiltrados = window.todosLosDocumentos.filter(doc => 
+        var eventosFiltrados = window.todosLosDocumentos.filter(doc =>
             doc.extendedProps.estado === 'completado'
         );
-        
+
         // Actualizar calendario
         window.calendar.removeAllEvents();
         window.calendar.addEventSource(eventosFiltrados);
+    }
+
+
+
+    // Variable global para la ruta del PDF actual
+    window.rutaPDFActual = '';
+    window.idDocumentoActual = 0;
+
+    // Mostrar detalle del documento (MODAL 1)
+    // Mostrar detalle del documento (MODAL 1)
+    function mostrarDetalleDocumento(evento) {
+        window.idDocumentoActual = evento.id;
+
+        // Extraer número y asunto
+        var partes = evento.title.split(': ');
+        var numero = partes[0];
+        var asunto = partes.slice(1).join(': ');
+
+        // Llenar información básica primero
+        document.getElementById('detNumDoc').textContent = numero;
+        document.getElementById('detAsunto').textContent = asunto;
+        document.getElementById('detFechaLim').textContent = evento.start.toLocaleDateString('es-ES');
+
+        // Llenar fecha de recepción
+        if (evento.extendedProps.fecha_recepcion) {
+            var fechaRecep = new Date(evento.extendedProps.fecha_recepcion);
+            document.getElementById('detFechaRecep').textContent = fechaRecep.toLocaleDateString('es-ES');
+        } else {
+            document.getElementById('detFechaRecep').textContent = 'No registrada';
+        }
+
+        // Estado
+        var badgeEstado = document.getElementById('detEstado');
+        var estadoTexto = evento.extendedProps.estado.replace('_', ' ').toUpperCase();
+        badgeEstado.textContent = estadoTexto;
+        badgeEstado.className = 'badge';
+        if (evento.extendedProps.estado === 'completado') {
+            badgeEstado.classList.add('bg-success');
+        } else if (evento.extendedProps.estado === 'en_progreso') {
+            badgeEstado.classList.add('bg-primary');
+        } else if (evento.extendedProps.estado === 'respondiendo') {
+            badgeEstado.classList.add('bg-info');
+        } else {
+            badgeEstado.classList.add('bg-warning');
+        }
+
+        // Prioridad
+        var badgePrioridad = document.getElementById('detPrioridad');
+        badgePrioridad.textContent = evento.extendedProps.prioridad.toUpperCase();
+        badgePrioridad.className = 'badge';
+        if (evento.extendedProps.prioridad === 'alta') {
+            badgePrioridad.classList.add('bg-danger');
+        } else if (evento.extendedProps.prioridad === 'media') {
+            badgePrioridad.classList.add('bg-warning');
+        } else {
+            badgePrioridad.classList.add('bg-success');
+        }
+
+        // Mostrar/ocultar botón Responder según estado
+        var btnResponder = document.getElementById('btnResponder');
+        if (evento.extendedProps.estado === 'completado' || evento.extendedProps.estado === 'archivado') {
+            btnResponder.style.display = 'none';
+        } else {
+            btnResponder.style.display = 'inline-block';
+        }
+
+        // Actualizar indicador de progreso según estado actual
+        actualizarStepper('stepperDetalles', evento.extendedProps.estado);
+
+        // Determinar carpeta
+        var carpeta = 'en_proceso';
+        if (evento.extendedProps.estado === 'completado' || evento.extendedProps.estado === 'archivado') {
+            carpeta = 'completados';
+        }
+
+        // Buscar y cargar el PDF
+        fetch('<?php echo BASE_URL; ?>calendario/buscarArchivoPDF/' + numero + '/' + carpeta)
+            .then(response => response.json())
+            .then(data => {
+                if (data.archivo) {
+                    var rutaPDF = '<?php echo BASE_URL; ?>Assets/documentos_oficiales/' + carpeta + '/' + data.archivo;
+                    window.rutaPDFActual = rutaPDF;
+
+                    // Actualizar iframe y botón de descarga
+                    document.getElementById('iframePreviewOriginal').src = rutaPDF;
+                    document.getElementById('btnDescargar').href = rutaPDF;
+                    document.getElementById('btnDescargar').download = data.archivo;
+                }
+            })
+            .catch(error => {
+                console.error('Error al buscar PDF:', error);
+            });
+
+        // Registrar visualización si es primera vez
+        if (evento.extendedProps.estado === 'delegado') {
+            registrarVisualizacion(evento.id);
+        }
+
+        // Aplicar efectos visuales si está completado
+        if (evento.extendedProps.estado === 'completado' || evento.extendedProps.estado === 'archivado') {
+            document.querySelector('#modalVerDetalles .modal-body').style.filter = 'grayscale(50%)';
+            document.querySelector('#modalVerDetalles .modal-body').style.opacity = '0.85';
+        } else {
+            document.querySelector('#modalVerDetalles .modal-body').style.filter = 'none';
+            document.querySelector('#modalVerDetalles .modal-body').style.opacity = '1';
+        }
+
+        // Mostrar modal
+        var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
+        modal.show();
+    }
+
+    // Actualizar indicador de progreso
+    function actualizarStepper(stepperId, estado) {
+        var stepper = document.getElementById(stepperId);
+        var steps = stepper.querySelectorAll('.stepper-item');
+
+        // Resetear todos
+        steps.forEach(step => {
+            step.classList.remove('active', 'completed');
+        });
+
+        // Marcar según estado
+        if (estado === 'delegado') {
+            steps[0].classList.add('active');
+        } else if (estado === 'en_progreso') {
+            steps[0].classList.add('completed');
+            steps[1].classList.add('active');
+        } else if (estado === 'respondiendo') {
+            steps[0].classList.add('completed');
+            steps[1].classList.add('completed');
+            steps[2].classList.add('active');
+        } else if (estado === 'completado' || estado === 'archivado') {
+            steps[0].classList.add('completed');
+            steps[1].classList.add('completed');
+            steps[2].classList.add('completed');
+            steps[3].classList.add('completed');
+            steps[3].classList.add('active');
+        }
+    }
+
+    // Registrar que el usuario visualizó el documento
+    function registrarVisualizacion(idDoc) {
+        fetch('<?php echo BASE_URL; ?>calendario/registrarVisualizacion', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded'
+                },
+                body: 'id=' + idDoc
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.tipo === 'success') {
+                    // Recargar calendario para reflejar el cambio de estado
+                    window.calendar.refetchEvents();
+                }
+            });
+    }
+
+    // Abrir PDF en nueva pestaña
+    function abrirPDFNuevaPestana() {
+        window.open(window.rutaPDFActual, '_blank');
+    }
+
+    // Abrir modal para responder (MODAL 2)
+    function abrirModalResponder() {
+        // Cerrar modal de detalles
+        var modalDetalles = bootstrap.Modal.getInstance(document.getElementById('modalVerDetalles'));
+        modalDetalles.hide();
+
+        // Llenar info en modal de responder
+        var numero = document.getElementById('detNumDoc').textContent;
+        document.getElementById('respNumDoc').textContent = numero;
+        document.getElementById('idDocResp').value = window.idDocumentoActual;
+
+        // Limpiar formulario
+        document.getElementById('formResponder').reset();
+        document.getElementById('infoArchivo').style.display = 'none';
+        document.getElementById('previewPDF').style.display = 'none';
+
+        // Mostrar modal de responder
+        var modalResponder = new bootstrap.Modal(document.getElementById('modalResponder'));
+        modalResponder.show();
+    }
+
+    // Mostrar info del archivo cuando se selecciona
+    function mostrarInfoArchivo() {
+        var input = document.getElementById('archivoRespuesta');
+        var archivo = input.files[0];
+
+        if (!archivo) {
+            document.getElementById('infoArchivo').style.display = 'none';
+            document.getElementById('previewPDF').style.display = 'none';
+            return;
+        }
+
+        // Validar tipo
+        if (archivo.type !== 'application/pdf') {
+            alertaPersonalizada('warning', 'El archivo debe ser PDF');
+            input.value = '';
+            return;
+        }
+
+        // Validar tamaño (10MB)
+        if (archivo.size > 10 * 1024 * 1024) {
+            alertaPersonalizada('warning', 'El archivo no debe superar 10MB');
+            input.value = '';
+            return;
+        }
+
+        // Mostrar información del archivo
+        document.getElementById('nombreArchivo').textContent = archivo.name;
+        var tamañoMB = (archivo.size / (1024 * 1024)).toFixed(2);
+        document.getElementById('tamañoArchivo').textContent = '(' + tamañoMB + ' MB)';
+
+        // Fecha y hora actual
+        var ahora = new Date();
+        var fechaHora = ahora.toLocaleDateString('es-ES') + ' ' + ahora.toLocaleTimeString('es-ES');
+        document.getElementById('fechaHoraRespuesta').textContent = fechaHora;
+
+        document.getElementById('infoArchivo').style.display = 'block';
+
+        // Preview del PDF
+        var reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('iframePreview').src = e.target.result;
+            document.getElementById('previewPDF').style.display = 'block';
+        };
+        reader.readAsDataURL(archivo);
+
+        // Al final de mostrarInfoArchivo(), AGREGAR:
+        document.getElementById('btnQuitarArchivo').style.display = 'inline-block';
+    }
+
+    // Confirmar completado (con o sin archivar)
+    function confirmarCompletado(archivar) {
+        var form = document.getElementById('formResponder');
+        var archivoInput = document.getElementById('archivoRespuesta');
+
+        // Validar que se haya subido archivo
+        if (!archivoInput.files || archivoInput.files.length === 0) {
+            alertaPersonalizada('warning', 'Debe adjuntar el archivo de respuesta');
+            return;
+        }
+
+        // Preparar FormData
+        var formData = new FormData(form);
+        formData.append('archivar', archivar ? '1' : '0');
+
+        // Enviar
+        fetch('<?php echo BASE_URL; ?>calendario/completarTarea', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.tipo === 'success') {
+                    alertaPersonalizada('success', data.mensaje);
+
+                    // Cerrar modal
+                    var modal = bootstrap.Modal.getInstance(document.getElementById('modalResponder'));
+                    modal.hide();
+
+                    // Recargar calendario
+                    window.calendar.refetchEvents();
+                } else {
+                    alertaPersonalizada(data.tipo, data.mensaje);
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alertaPersonalizada('error', 'Error al completar la tarea');
+            });
+    }
+
+    // Quitar archivo seleccionado
+    function quitarArchivo() {
+        document.getElementById('archivoRespuesta').value = '';
+        document.getElementById('infoArchivo').style.display = 'none';
+        document.getElementById('previewPDF').style.display = 'none';
+        document.getElementById('btnQuitarArchivo').style.display = 'none';
     }
 </script>
 

@@ -25,7 +25,7 @@ class ArchivosModel extends Query{
         FROM carpetas 
         WHERE id_usuario = $id_usuario 
         AND estado = 1
-        AND id != 1
+        AND id = 1
         ORDER BY id DESC
         LIMIT $desde, $porPagina";
         return $this->selectAll($sql);
@@ -37,7 +37,6 @@ class ArchivosModel extends Query{
         FROM carpetas 
         WHERE id_usuario = $id_usuario 
         AND estado = 1
-        AND id != 1 
         ORDER BY id DESC";
         return $this->select($sql);
     }

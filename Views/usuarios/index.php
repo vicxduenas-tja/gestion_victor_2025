@@ -22,6 +22,8 @@
                                     <th>Correo</th>
                                     <th>Telefono</th>
                                     <th>Direccion</th>
+                                    <th>Oficina</th>
+                                    <th>Cargo</th>
                                     <th>Perfil</th>
                                     <th>F. registro</th>
                                 </tr>
@@ -74,7 +76,7 @@
                                             email
                                         </i>
                                     </span>
-                                    <input class="form-control" type="email" id="correo" name="correo" placeholder="Correo" required>
+                                    <input class="form-control" type="email" id="correo" name="correo" placeholder="ejemplo@correo.com" pattern="[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}$" required title="Ingrese un correo válido">
                                 </div>
                             </div>
                             <div class="col-md-6">
@@ -85,7 +87,7 @@
                                             phone
                                         </i>
                                     </span>
-                                    <input class="form-control" type="number" id="telefono" name="telefono" placeholder="Telefono" required>
+                                    <input class="form-control" type="text" id="telefono" name="telefono" placeholder="Ej: 71234567" pattern="[67][0-9]{7}" maxlength="8" required title="Ingrese numero telefonico valido">
                                 </div>
                             </div>
                             <div class="col-md-12">
@@ -124,6 +126,34 @@
                                     </select> 
                                 </div>
                             </div>
+                            <div class="col-md-6">
+                                <label for="id_oficina">Oficina Asignada</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="material-icons">
+                                            business
+                                        </i>
+                                    </span>
+                                    <select name="id_oficina" id="id_oficina" class="form-control" required>
+                                        <option value="">Sin oficina asignada</option>
+                                    </select> 
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <label for="cargo">Cargo</label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="material-icons">
+                                            badge
+                                        </i>
+                                    </span>
+                                    <select name="cargo" id="cargo" class="form-control" required>
+                                        <option value="">Seleccionar cargo</option>
+                                        <option value="Encargado de Oficina">Encargado de Oficina</option>
+                                        <option value="Auxiliar">Auxiliar</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
                     </div>
                     <div class="modal-footer">
@@ -144,5 +174,7 @@
     </div>
 </div>
 
+
+<script src="<?php echo BASE_URL; ?>Assets/pages/usuarios.js?v=<?php echo time(); ?>"></script>
 
 <?php include_once 'Views/template/footer.php'; ?>

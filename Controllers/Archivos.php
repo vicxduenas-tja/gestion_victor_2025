@@ -1,6 +1,15 @@
 <?php
 class Archivos extends Controller
 {
+    public function index()
+    {
+        // Redirigir a página 1 por defecto
+        header('Location: ' . BASE_URL . 'archivos/pagina/1');
+        exit;
+    }
+
+
+
     private $id_usuario, $correo;
     public function __construct()
     {
@@ -20,7 +29,7 @@ class Archivos extends Controller
         $data['active'] = 'todos';
         $data['script'] = 'files.js';
         ##paginacion
-        $pagina = (empty($page)) ? 1 : $page ;
+        $pagina = (empty($page)) ? 1 : $page;
         $porPagina = 12;
         $desde = ($pagina - 1) * $porPagina;
         $carpetas = $this->model->getCarpetas($desde, $porPagina, $this->id_usuario);
@@ -42,7 +51,7 @@ class Archivos extends Controller
 
     public function getUsuarios()
     {
-        $valor = $_GET['q'] ;      
+        $valor = $_GET['q'];
         $data = $this->model->getUsuarios($valor, $this->id_usuario);
         for ($i = 0; $i < count($data); $i++) {
             $data[$i]['text'] = $data[$i]['correo'];
@@ -62,11 +71,13 @@ class Archivos extends Controller
             for ($i = 0; $i < count($archivos); $i++) {
                 for ($j = 0; $j < count($usuarios); $j++) {
                     $dato = $this->model->getUsuario($usuarios[$j]);
-                    $result = $this->model->getDetalle($dato['correo'], $archivos
-                    [$i]);
+                    $result = $this->model->getDetalle($dato['correo'], $archivos[$i]);
                     if (empty($result)) {
-                        $res = $this->model->registrarDetalle($dato['correo'], $archivos[$i], 
-                        $this->id_usuario);
+                        $res = $this->model->registrarDetalle(
+                            $dato['correo'],
+                            $archivos[$i],
+                            $this->id_usuario
+                        );
                     } else {
                         $res = 1;
                     }
@@ -100,7 +111,7 @@ class Archivos extends Controller
     public function eliminar($id)
     {
         $fecha = date('Y-m-d H:i:s');
-        $nueva= date("Y-m-d H:i:s", strtotime($fecha . '+1 month'));
+        $nueva = date("Y-m-d H:i:s", strtotime($fecha . '+1 month'));
         $data = $this->model->eliminar($nueva, $id);
         if ($data == 1) {
             $res = array('tipo' => 'success', 'mensaje' => 'Archivo dado de baja');
@@ -115,7 +126,7 @@ class Archivos extends Controller
     public function eliminarCompartido($id)
     {
         $fecha = date('Y-m-d H:i:s');
-        $nueva= date("Y-m-d H:i:s", strtotime($fecha . '+1 month'));
+        $nueva = date("Y-m-d H:i:s", strtotime($fecha . '+1 month'));
         $data = $this->model->eliminarCompartido($nueva, $id);
         if ($data == 1) {
             $res = array('tipo' => 'success', 'mensaje' => 'Archivo dado de baja');
@@ -157,7 +168,7 @@ class Archivos extends Controller
 
     public function delete($id)
     {
-        $data = $this->model->eliminar(1,null,$id);
+        $data = $this->model->eliminar(1, null, $id);
         if ($data == 1) {
             $res = array('tipo' => 'success', 'mensaje' => 'Archivo Restaurado');
         } else {
@@ -166,7 +177,4 @@ class Archivos extends Controller
         echo json_encode($res, JSON_UNESCAPED_UNICODE);
         die();
     }
-
-
-
 }
