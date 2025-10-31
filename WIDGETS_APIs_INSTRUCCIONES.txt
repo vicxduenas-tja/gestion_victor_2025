@@ -1,0 +1,207 @@
+================================================================================
+  INSTRUCCIONES PARA CONFIGURAR WIDGETS DE CLIMA Y DÍAS FERIADOS
+================================================================================
+
+Este sistema incluye widgets independientes para mostrar información del clima
+en Tarija, Bolivia y los días feriados de Bolivia.
+
+================================================================================
+1. WIDGET DE CLIMA (OpenWeatherMap API)
+================================================================================
+
+PASO 1: Obtener API Key GRATUITA
+---------------------------------
+1. Visita: https://openweathermap.org/api
+2. Haz clic en "Sign Up" (registrarse)
+3. Completa el formulario de registro (es gratis)
+4. Verifica tu email
+5. Inicia sesión y ve a: https://home.openweathermap.org/api_keys
+6. Copia tu API key (ejemplo: abc123def456ghi789jkl012mno345pq)
+
+NOTA: La API key puede tardar unos minutos en activarse (hasta 2 horas)
+
+PASO 2: Configurar la API Key en el sistema
+-------------------------------------------
+1. Abre el archivo: Models/ClimaModel.php
+2. Busca la línea: private $apiKey = 'TU_API_KEY_AQUI';
+3. Reemplaza 'TU_API_KEY_AQUI' con tu API key real
+4. Guarda el archivo
+
+Ejemplo:
+    private $apiKey = 'abc123def456ghi789jkl012mno345pq';
+
+LÍMITES DEL PLAN GRATUITO:
+- 1,000 llamadas por día
+- Actualización cada 10 minutos
+- Datos actuales del clima
+- Pronóstico de 5 días
+
+UBICACIÓN CONFIGURADA:
+- Ciudad: Tarija, Bolivia
+- Latitud: -21.5355
+- Longitud: -64.7295
+
+Para cambiar la ubicación, edita el archivo Controllers/Clima.php
+
+
+================================================================================
+2. WIDGET DE DÍAS FERIADOS (Nager.Date API)
+================================================================================
+
+PASO 1: ¡No requiere configuración!
+------------------------------------
+La API de Nager.Date es TOTALMENTE GRATUITA y NO requiere API key.
+¡Ya está lista para usar!
+
+CARACTERÍSTICAS:
+- Sin límite de llamadas
+- Sin necesidad de registro
+- Días feriados de Bolivia actualizados
+- Funciona inmediatamente
+
+API ENDPOINT: https://date.nager.at/api/v3/PublicHolidays/[YEAR]/BO
+
+
+================================================================================
+3. CÓMO USAR LOS WIDGETS
+================================================================================
+
+OPCIÓN A: Páginas Completas
+----------------------------
+Accede a las páginas completas mediante las URLs:
+
+- Clima: http://tudominio.com/gestion/clima/index
+- Feriados: http://tudominio.com/gestion/feriados/index
+
+OPCIÓN B: Widgets Compactos (Para integrar en el dashboard)
+-----------------------------------------------------------
+Incluye los widgets en cualquier vista PHP:
+
+Para el widget de clima:
+    <?php include_once 'Views/components/widget_clima.php'; ?>
+
+Para el widget de feriados:
+    <?php include_once 'Views/components/widget_feriados.php'; ?>
+
+Ejemplo de integración en Views/admin/home.php:
+
+    <div class="row">
+        <div class="col-md-6">
+            <?php include_once 'Views/components/widget_clima.php'; ?>
+        </div>
+        <div class="col-md-6">
+            <?php include_once 'Views/components/widget_feriados.php'; ?>
+        </div>
+    </div>
+
+
+================================================================================
+4. ARCHIVOS CREADOS
+================================================================================
+
+Controladores:
+- Controllers/Clima.php          - Lógica del clima
+- Controllers/Feriados.php       - Lógica de feriados
+
+Modelos:
+- Models/ClimaModel.php          - Conexión con OpenWeatherMap API
+- Models/FeriadosModel.php       - Conexión con Nager.Date API
+
+Vistas Completas:
+- Views/clima/index.php          - Página completa del clima
+- Views/feriados/index.php       - Página completa de feriados
+
+Widgets Compactos:
+- Views/components/widget_clima.php     - Widget compacto de clima
+- Views/components/widget_feriados.php  - Widget compacto de feriados
+
+
+================================================================================
+5. SOLUCIÓN DE PROBLEMAS
+================================================================================
+
+Problema: El widget de clima muestra error
+-------------------------------------------
+Solución:
+1. Verifica que hayas configurado tu API key en Models/ClimaModel.php
+2. Asegúrate de que la API key esté activada (puede tardar hasta 2 horas)
+3. Verifica que tu servidor tenga cURL habilitado
+4. Revisa los logs de error de PHP
+
+Problema: El widget de feriados no carga
+-----------------------------------------
+Solución:
+1. Verifica que tu servidor tenga acceso a internet
+2. Asegúrate de que cURL esté habilitado en PHP
+3. Verifica el firewall del servidor
+
+Problema: Los widgets no se actualizan
+---------------------------------------
+Solución:
+- El widget de clima se actualiza cada 10-15 minutos automáticamente
+- El widget de feriados se actualiza cada hora automáticamente
+- Puedes refrescar la página para forzar una actualización
+
+
+================================================================================
+6. PERSONALIZACIÓN
+================================================================================
+
+Cambiar la frecuencia de actualización:
+----------------------------------------
+Edita los archivos de widgets:
+- widget_clima.php: Busca setInterval(cargarWidgetClima, 900000);
+- widget_feriados.php: Busca setInterval(cargarWidgetFeriados, 3600000);
+
+Valores en milisegundos:
+- 300000 = 5 minutos
+- 600000 = 10 minutos
+- 900000 = 15 minutos
+- 3600000 = 1 hora
+
+Cambiar ubicación del clima:
+-----------------------------
+Edita Controllers/Clima.php y modifica:
+    $lat = -21.5355;  // Nueva latitud
+    $lon = -64.7295;  // Nueva longitud
+
+
+================================================================================
+7. CARACTERÍSTICAS TÉCNICAS
+================================================================================
+
+CLIMA:
+- Temperatura actual en °Celsius
+- Sensación térmica
+- Temperaturas máxima y mínima
+- Humedad relativa
+- Velocidad del viento (convertida a km/h)
+- Presión atmosférica
+- Descripción del clima en español
+- Iconos animados del clima
+
+FERIADOS:
+- Próximos 5 feriados
+- Contador de días restantes
+- Clasificación: Nacional o Regional
+- Lista completa del año
+- Selector de año (2024-2026)
+- Actualización automática
+
+
+================================================================================
+8. SOPORTE
+================================================================================
+
+OpenWeatherMap API:
+- Documentación: https://openweathermap.org/api
+- FAQ: https://openweathermap.org/faq
+
+Nager.Date API:
+- Documentación: https://date.nager.at/swagger/index.html
+- GitHub: https://github.com/nager/Nager.Date
+
+
+================================================================================
+FIN DE LAS INSTRUCCIONES
+================================================================================

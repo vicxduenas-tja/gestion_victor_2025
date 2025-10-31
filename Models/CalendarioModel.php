@@ -58,12 +58,21 @@ class CalendarioModel extends Query
     }
 
     // Contar documentos pendientes
-    public function contarPendientes($id_usuario)
+    public function contarPendientes($id_usuario, $rol = null, $id_oficina = null)
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM documentos_oficiales 
-                WHERE id_usuario_asignado = $id_usuario 
-                AND estado = 'pendiente'";
+        // Si el rol es admin (1), cuenta todos los pendientes
+        if ($rol == 1) {
+            $sql = "SELECT COUNT(*) as total
+                    FROM documentos_oficiales
+                    WHERE estado IN ('delegado', 'en_progreso')";
+        } else {
+            // Usuario normal: solo sus tareas o de su oficina
+            $sql = "SELECT COUNT(*) as total
+                    FROM documentos_oficiales
+                    WHERE (id_usuario_asignado = $id_usuario
+                           OR id_oficina_destino = $id_oficina)
+                    AND estado IN ('delegado', 'en_progreso')";
+        }
 
         $resultado = $this->select($sql);
         return $resultado['total'];
@@ -136,104 +145,33 @@ class CalendarioModel extends Query
         return $this->insertar($sql, $datos);
     }
 
-    // =====================================================
-    // MÉTODOS PARA SISTEMA DE NOTIFICACIONES
-    // =====================================================
-
     /**
-     * Obtiene las notificaciones pendientes para un usuario
-     * Retorna un array con tareas nuevas y documentos de conocimiento nuevos
+     * Obtiene solo las notificaciones "no vistas" para el usuario.
+     * Incluye tareas delegadas y documentos para conocimiento sin visualizar
      */
-    public function listarNotificaciones($id_usuario)
+    public function getNotificaciones($id_usuario, $id_oficina)
     {
-        $notificaciones = array();
-
-        // Obtener rol e id_oficina del usuario
-        $sqlRol = "SELECT rol, id_oficina FROM usuarios WHERE id = $id_usuario";
+        // Obtener rol del usuario
+        $sqlRol = "SELECT rol FROM usuarios WHERE id = $id_usuario";
         $usuario = $this->select($sqlRol);
 
-        // 1. TAREAS NUEVAS (documentos_oficiales no vistos)
         if ($usuario['rol'] == 1) {
-            // Admin ve todas las tareas
-            $sqlTareas = "SELECT
-                            id,
-                            numero_documento,
-                            asunto,
-                            fecha_limite,
-                            prioridad,
-                            'tarea' as tipo
-                        FROM documentos_oficiales
-                        WHERE fecha_visualizado IS NULL
-                        AND estado = 'delegado'
-                        ORDER BY fecha_registro DESC";
+            // ADMIN: Ve todas las notificaciones
+            $sql = "SELECT id, numero_documento, asunto, fecha_recepcion, fecha_limite, estado, sin_limite
+                    FROM documentos_oficiales
+                    WHERE fecha_visualizado IS NULL
+                    AND estado IN ('delegado', 'conocimiento')
+                    ORDER BY fecha_recepcion ASC";
         } else {
-            // Usuarios normales ven solo de su oficina
-            $sqlTareas = "SELECT
-                            id,
-                            numero_documento,
-                            asunto,
-                            fecha_limite,
-                            prioridad,
-                            'tarea' as tipo
-                        FROM documentos_oficiales
-                        WHERE fecha_visualizado IS NULL
-                        AND estado = 'delegado'
-                        AND id_oficina_destino = {$usuario['id_oficina']}
-                        ORDER BY fecha_registro DESC";
+            // USUARIO: Solo ve notificaciones de su oficina
+            $sql = "SELECT id, numero_documento, asunto, fecha_recepcion, fecha_limite, estado, sin_limite
+                    FROM documentos_oficiales
+                    WHERE fecha_visualizado IS NULL
+                    AND (id_oficina_destino = $id_oficina OR estado = 'conocimiento')
+                    AND estado IN ('delegado', 'conocimiento')
+                    ORDER BY fecha_recepcion ASC";
         }
 
-        $tareas = $this->selectAll($sqlTareas);
-        if ($tareas) {
-            $notificaciones = array_merge($notificaciones, $tareas);
-        }
-
-        // 2. DOCUMENTOS PARA CONOCIMIENTO NUEVOS (no vistos)
-        $sqlConocimiento = "SELECT
-                                dc.id,
-                                dc.titulo,
-                                dc.descripcion,
-                                dc.fecha_publicacion,
-                                'conocimiento' as tipo
-                            FROM documentos_conocimiento dc
-                            WHERE dc.estado = 1
-                            AND dc.id NOT IN (
-                                SELECT id_documento_conocimiento
-                                FROM conocimiento_visto
-                                WHERE id_usuario = $id_usuario
-                            )
-                            ORDER BY dc.fecha_publicacion DESC";
-
-        $conocimientos = $this->selectAll($sqlConocimiento);
-        if ($conocimientos) {
-            $notificaciones = array_merge($notificaciones, $conocimientos);
-        }
-
-        return $notificaciones;
-    }
-
-    /**
-     * Marca una tarea como vista
-     */
-    public function marcarTareaVista($id_documento)
-    {
-        $sql = "UPDATE documentos_oficiales
-                SET fecha_visualizado = NOW()
-                WHERE id = ?";
-
-        $datos = array($id_documento);
-        return $this->save($sql, $datos);
-    }
-
-    /**
-     * Marca un documento de conocimiento como visto
-     */
-    public function marcarConocimientoVisto($id_documento, $id_usuario)
-    {
-        $sql = "INSERT INTO conocimiento_visto (id_documento_conocimiento, id_usuario)
-                VALUES (?, ?)
-                ON DUPLICATE KEY UPDATE fecha_vista = NOW()";
-
-        $datos = array($id_documento, $id_usuario);
-        return $this->save($sql, $datos);
+        return $this->selectAll($sql);
     }
 }

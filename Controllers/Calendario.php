@@ -2,10 +2,18 @@
 class Calendario extends Controller
 {
     private $id_usuario;
+    private $id_oficina;
+    private $rol;
 
     public function __construct()
     {
-        parent::__construct();
+        // Carga manual de dependencias (evita errores de orden)
+        $this->views = new Views();
+        require_once 'Config/App/Conexion.php';
+        require_once 'Config/App/Query.php';
+        require_once 'Models/CalendarioModel.php';
+        $this->model = new CalendarioModel();
+
         session_start();
 
         // Validar sesión
@@ -15,6 +23,8 @@ class Calendario extends Controller
         }
 
         $this->id_usuario = $_SESSION['id'];
+        $this->id_oficina = $_SESSION['id_oficina'] ?? null;
+        $this->rol = $_SESSION['rol'];
     }
 
     // Vista principal del calendario
@@ -206,75 +216,14 @@ class Calendario extends Controller
         }
     }
 
-    // =====================================================
-    // MÉTODOS PARA SISTEMA DE NOTIFICACIONES
-    // =====================================================
-
     /**
-     * Obtener todas las notificaciones pendientes del usuario
-     * Retorna JSON con array de notificaciones (tareas nuevas y documentos de conocimiento)
+     * Devuelve una lista de tareas y P.C. que no han sido visualizados
+     * Usado para el sistema de notificaciones
      */
-    public function obtenerNotificaciones()
+    public function listarNotificaciones()
     {
-        $notificaciones = $this->model->listarNotificaciones($this->id_usuario);
-
-        echo json_encode($notificaciones, JSON_UNESCAPED_UNICODE);
+        $data = $this->model->getNotificaciones($this->id_usuario, $this->id_oficina);
+        echo json_encode($data);
         die();
-    }
-
-    /**
-     * Marcar una tarea como vista
-     * Recibe: id_documento (POST)
-     */
-    public function marcarTareaVista()
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id_documento = $_POST['id_documento'] ?? null;
-
-            if (!$id_documento) {
-                $res = array('tipo' => 'error', 'mensaje' => 'ID de documento requerido');
-                echo json_encode($res);
-                die();
-            }
-
-            $resultado = $this->model->marcarTareaVista($id_documento);
-
-            if ($resultado) {
-                $res = array('tipo' => 'success', 'mensaje' => 'Tarea marcada como vista');
-            } else {
-                $res = array('tipo' => 'error', 'mensaje' => 'Error al marcar tarea como vista');
-            }
-
-            echo json_encode($res);
-            die();
-        }
-    }
-
-    /**
-     * Marcar un documento de conocimiento como visto
-     * Recibe: id_documento (POST)
-     */
-    public function marcarConocimientoVisto()
-    {
-        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-            $id_documento = $_POST['id_documento'] ?? null;
-
-            if (!$id_documento) {
-                $res = array('tipo' => 'error', 'mensaje' => 'ID de documento requerido');
-                echo json_encode($res);
-                die();
-            }
-
-            $resultado = $this->model->marcarConocimientoVisto($id_documento, $this->id_usuario);
-
-            if ($resultado) {
-                $res = array('tipo' => 'success', 'mensaje' => 'Documento de conocimiento marcado como visto');
-            } else {
-                $res = array('tipo' => 'error', 'mensaje' => 'Error al marcar documento como visto');
-            }
-
-            echo json_encode($res);
-            die();
-        }
     }
 }
