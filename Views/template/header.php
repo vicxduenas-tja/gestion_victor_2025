@@ -80,6 +80,12 @@
                         <a href="<?php echo BASE_URL . 'calendario'; ?>"><i class="material-icons-two-tone">calendar_today</i>Calendario<span class="badge rounded-pill badge-success float-end"><?php echo isset($data['docs_pendientes']) ? $data['docs_pendientes'] : 0; ?></span></a>
                     </li>
 
+                    <li class="<?php echo (isset($data['menu']) && $data['menu'] == 'reportes') ? 'active-page' : ''; ?>">
+                        <a href="<?php echo BASE_URL . 'reportes'; ?>" class="<?php echo (isset($data['menu']) && $data['menu'] == 'reportes') ? 'active' : ''; ?>">
+                            <i class="material-icons-two-tone">assessment</i>Reportes
+                        </a>
+                    </li>
+
                 </ul>
             </div>
         </div>
