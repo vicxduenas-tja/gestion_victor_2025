@@ -152,10 +152,13 @@ class ReportesModel extends Query
     public function getInventarioActivo(int $id_oficina = 0)
     {
         $id_oficina_safe = intval($id_oficina);
-        
+
+        // Si es Admin (id_oficina = 0), mostrar de todas las oficinas
+        $whereOficina = ($id_oficina_safe > 0) ? "d.id_oficina_destino = $id_oficina_safe AND" : "";
+
         $sql = "
             -- Bloque 1: Tareas Pendientes (En Progreso) de la oficina
-            (SELECT 
+            (SELECT
                 d.numero_documento,
                 d.asunto,
                 d.fecha_recepcion,
@@ -164,13 +167,13 @@ class ReportesModel extends Query
                 d.sin_limite,
                 'Tarea' AS tipo_doc
             FROM documentos_oficiales d
-            WHERE 
-                d.id_oficina_destino = $id_oficina_safe AND d.estado = 'en_progreso')
-                
+            WHERE
+                $whereOficina d.estado = 'en_progreso')
+
             UNION ALL
-            
+
             -- Bloque 2: Documentos de Conocimiento (Globales)
-            (SELECT 
+            (SELECT
                 hr.numero_registro AS numero_documento,
                 hr.asunto,
                 hr.fecha_recepcion,
@@ -179,9 +182,9 @@ class ReportesModel extends Query
                 hr.sin_limite,
                 'Conocimiento' AS tipo_doc
             FROM hojas_ruta hr
-            WHERE 
+            WHERE
                 hr.estado = 'conocimiento')
-                
+
             ORDER BY tipo_doc DESC, fecha_recepcion ASC
         ";
 

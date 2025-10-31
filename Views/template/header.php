@@ -76,8 +76,14 @@
                         </a>
                     </li>
 
-                    <li>
-                        <a href="<?php echo BASE_URL . 'calendario'; ?>"><i class="material-icons-two-tone">calendar_today</i>Calendario<span class="badge rounded-pill badge-success float-end"><?php echo isset($data['docs_pendientes']) ? $data['docs_pendientes'] : 0; ?></span></a>
+                    <li class="<?php echo (isset($data['menu']) && $data['menu'] == 'calendario') ? 'active-page' : ''; ?>">
+                        <a href="<?php echo BASE_URL . 'calendario'; ?>" class="<?php echo (isset($data['menu']) && $data['menu'] == 'calendario') ? 'active' : ''; ?>"><i class="material-icons-two-tone">calendar_today</i>Calendario<span class="badge rounded-pill badge-success float-end"><?php echo isset($data['docs_pendientes']) ? $data['docs_pendientes'] : 0; ?></span></a>
+                    </li>
+
+                    <li class="<?php echo (isset($data['menu']) && $data['menu'] == 'reportes') ? 'active-page' : ''; ?>">
+                        <a href="<?php echo BASE_URL . 'reportes'; ?>" class="<?php echo (isset($data['menu']) && $data['menu'] == 'reportes') ? 'active' : ''; ?>">
+                            <i class="material-icons-two-tone">assessment</i>Reportes
+                        </a>
                     </li>
 
                 </ul>
@@ -116,7 +122,7 @@
                         <div class="d-flex">
                             <ul class="navbar-nav">
                                 <li class="nav-item hidden-on-mobile">
-                                    <a class="nav-link" href="#">Reportes</a>
+                                    <a class="nav-link" href="<?php echo BASE_URL . 'reportes'; ?>"><i class="material-icons">assessment</i> Reportes</a>
                                 </li>
                                 <li class="nav-item">
                                     <a class="nav-link toggle-search" href="#"><i class="material-icons">search</i></a>
