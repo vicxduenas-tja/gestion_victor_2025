@@ -205,4 +205,76 @@ class Calendario extends Controller
             echo json_encode(['archivo' => false]);
         }
     }
+
+    // =====================================================
+    // MÉTODOS PARA SISTEMA DE NOTIFICACIONES
+    // =====================================================
+
+    /**
+     * Obtener todas las notificaciones pendientes del usuario
+     * Retorna JSON con array de notificaciones (tareas nuevas y documentos de conocimiento)
+     */
+    public function obtenerNotificaciones()
+    {
+        $notificaciones = $this->model->listarNotificaciones($this->id_usuario);
+
+        echo json_encode($notificaciones, JSON_UNESCAPED_UNICODE);
+        die();
+    }
+
+    /**
+     * Marcar una tarea como vista
+     * Recibe: id_documento (POST)
+     */
+    public function marcarTareaVista()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id_documento = $_POST['id_documento'] ?? null;
+
+            if (!$id_documento) {
+                $res = array('tipo' => 'error', 'mensaje' => 'ID de documento requerido');
+                echo json_encode($res);
+                die();
+            }
+
+            $resultado = $this->model->marcarTareaVista($id_documento);
+
+            if ($resultado) {
+                $res = array('tipo' => 'success', 'mensaje' => 'Tarea marcada como vista');
+            } else {
+                $res = array('tipo' => 'error', 'mensaje' => 'Error al marcar tarea como vista');
+            }
+
+            echo json_encode($res);
+            die();
+        }
+    }
+
+    /**
+     * Marcar un documento de conocimiento como visto
+     * Recibe: id_documento (POST)
+     */
+    public function marcarConocimientoVisto()
+    {
+        if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+            $id_documento = $_POST['id_documento'] ?? null;
+
+            if (!$id_documento) {
+                $res = array('tipo' => 'error', 'mensaje' => 'ID de documento requerido');
+                echo json_encode($res);
+                die();
+            }
+
+            $resultado = $this->model->marcarConocimientoVisto($id_documento, $this->id_usuario);
+
+            if ($resultado) {
+                $res = array('tipo' => 'success', 'mensaje' => 'Documento de conocimiento marcado como visto');
+            } else {
+                $res = array('tipo' => 'error', 'mensaje' => 'Error al marcar documento como visto');
+            }
+
+            echo json_encode($res);
+            die();
+        }
+    }
 }

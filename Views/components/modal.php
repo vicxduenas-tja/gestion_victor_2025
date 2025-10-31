@@ -135,3 +135,27 @@
         </div>
     </div>
 </div>
+
+<!-- Modal de Notificaciones -->
+<div id="modalNotificacion" class="modal fade" tabindex="-1" role="dialog" aria-labelledby="modalNotificacionLabel" aria-hidden="true" data-bs-backdrop="static" data-bs-keyboard="false">
+    <div class="modal-dialog modal-dialog-centered" role="document">
+        <div class="modal-content" id="notificacionContent">
+            <div class="modal-header" id="notificacionHeader">
+                <h5 class="modal-title" id="notificacionTitulo">
+                    <i class="material-icons align-middle" id="notificacionIcono"></i>
+                    <span id="notificacionTipoTexto"></span>
+                </h5>
+            </div>
+            <div class="modal-body">
+                <div id="notificacionContenido">
+                    <!-- El contenido se llenará dinámicamente con JavaScript -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-primary" id="btnAceptarNotificacion">
+                    Aceptar
+                </button>
+            </div>
+        </div>
+    </div>
+</div>

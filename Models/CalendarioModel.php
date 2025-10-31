@@ -130,9 +130,110 @@ class CalendarioModel extends Query
 
     public function registrarArchivoRespondido($id_carpeta, $nombre_archivo, $id_usuario)
     {
-        $sql = "INSERT INTO archivos (nombre, id_carpeta, id_usuario) 
+        $sql = "INSERT INTO archivos (nombre, id_carpeta, id_usuario)
             VALUES (?, ?, ?)";
         $datos = array($nombre_archivo, $id_carpeta, $id_usuario);
         return $this->insertar($sql, $datos);
+    }
+
+    // =====================================================
+    // MÉTODOS PARA SISTEMA DE NOTIFICACIONES
+    // =====================================================
+
+    /**
+     * Obtiene las notificaciones pendientes para un usuario
+     * Retorna un array con tareas nuevas y documentos de conocimiento nuevos
+     */
+    public function listarNotificaciones($id_usuario)
+    {
+        $notificaciones = array();
+
+        // Obtener rol e id_oficina del usuario
+        $sqlRol = "SELECT rol, id_oficina FROM usuarios WHERE id = $id_usuario";
+        $usuario = $this->select($sqlRol);
+
+        // 1. TAREAS NUEVAS (documentos_oficiales no vistos)
+        if ($usuario['rol'] == 1) {
+            // Admin ve todas las tareas
+            $sqlTareas = "SELECT
+                            id,
+                            numero_documento,
+                            asunto,
+                            fecha_limite,
+                            prioridad,
+                            'tarea' as tipo
+                        FROM documentos_oficiales
+                        WHERE fecha_visualizado IS NULL
+                        AND estado = 'delegado'
+                        ORDER BY fecha_registro DESC";
+        } else {
+            // Usuarios normales ven solo de su oficina
+            $sqlTareas = "SELECT
+                            id,
+                            numero_documento,
+                            asunto,
+                            fecha_limite,
+                            prioridad,
+                            'tarea' as tipo
+                        FROM documentos_oficiales
+                        WHERE fecha_visualizado IS NULL
+                        AND estado = 'delegado'
+                        AND id_oficina_destino = {$usuario['id_oficina']}
+                        ORDER BY fecha_registro DESC";
+        }
+
+        $tareas = $this->selectAll($sqlTareas);
+        if ($tareas) {
+            $notificaciones = array_merge($notificaciones, $tareas);
+        }
+
+        // 2. DOCUMENTOS PARA CONOCIMIENTO NUEVOS (no vistos)
+        $sqlConocimiento = "SELECT
+                                dc.id,
+                                dc.titulo,
+                                dc.descripcion,
+                                dc.fecha_publicacion,
+                                'conocimiento' as tipo
+                            FROM documentos_conocimiento dc
+                            WHERE dc.estado = 1
+                            AND dc.id NOT IN (
+                                SELECT id_documento_conocimiento
+                                FROM conocimiento_visto
+                                WHERE id_usuario = $id_usuario
+                            )
+                            ORDER BY dc.fecha_publicacion DESC";
+
+        $conocimientos = $this->selectAll($sqlConocimiento);
+        if ($conocimientos) {
+            $notificaciones = array_merge($notificaciones, $conocimientos);
+        }
+
+        return $notificaciones;
+    }
+
+    /**
+     * Marca una tarea como vista
+     */
+    public function marcarTareaVista($id_documento)
+    {
+        $sql = "UPDATE documentos_oficiales
+                SET fecha_visualizado = NOW()
+                WHERE id = ?";
+
+        $datos = array($id_documento);
+        return $this->save($sql, $datos);
+    }
+
+    /**
+     * Marca un documento de conocimiento como visto
+     */
+    public function marcarConocimientoVisto($id_documento, $id_usuario)
+    {
+        $sql = "INSERT INTO conocimiento_visto (id_documento_conocimiento, id_usuario)
+                VALUES (?, ?)
+                ON DUPLICATE KEY UPDATE fecha_vista = NOW()";
+
+        $datos = array($id_documento, $id_usuario);
+        return $this->save($sql, $datos);
     }
 }
