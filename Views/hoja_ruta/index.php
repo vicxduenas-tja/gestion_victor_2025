@@ -87,6 +87,12 @@
                                     <div class="col-md-6 mb-2">
                                         <label class="form-label">Fecha Límite *</label>
                                         <input type="date" class="form-control form-control-sm" id="fecha_limite" required>
+                                        <div class="form-check mt-1">
+                                            <input class="form-check-input" type="checkbox" id="sin_limite">
+                                            <label class="form-check-label" for="sin_limite">
+                                                Sin límite (Para Conocimiento)
+                                            </label>
+                                        </div>
                                     </div>
                                 </div>
 
@@ -104,6 +110,7 @@
                                     <label class="form-label">Oficina Destino *</label>
                                     <select class="form-control form-control-sm" id="oficina_destino" required>
                                         <option value="">Seleccione oficina...</option>
+                                        <option value="0">Todas las Oficinas (Para Conocimiento)</option>
                                     </select>
                                 </div>
 
@@ -119,7 +126,12 @@
 
                                 <div class="mb-2">
                                     <label class="form-label">Documento Adjunto (PDF) *</label>
-                                    <input type="file" class="form-control form-control-sm" id="archivo_adjunto" accept=".pdf" required onchange="previsualizarPDF()">
+                                    <div class="input-group">
+                                        <input type="file" class="form-control form-control-sm" id="archivo_adjunto" accept=".pdf" required onchange="previsualizarPDF()">
+                                        <button type="button" class="btn btn-outline-danger btn-sm" id="btnQuitarArchivo" style="display: none;" onclick="quitarArchivo()" title="Quitar archivo">
+                                            <span class="material-icons" style="font-size: 18px; vertical-align: middle;">close</span>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="mb-2">
@@ -141,8 +153,11 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="guardarHojaRuta()">
-                        <i class="fas fa-save"></i> Guardar Hoja de Ruta
+                    <button type="button" class="btn btn-info" id="btnPublicarPC" onclick="publicarParaConocimiento()" disabled>
+                        <i class="fas fa-book"></i> Publicar P.C.
+                    </button>
+                    <button type="button" class="btn btn-primary" id="btnGuardarDelegar" onclick="guardarHojaRuta()" disabled>
+                        <i class="fas fa-save"></i> Guardar y Delegar
                     </button>
                 </div>
             </div>
@@ -221,19 +236,87 @@
 <script>
     var oficinasYaCargadas = false;
 
+    // Función que controla el estado del modal según la selección
+    function actualizarEstadoModal() {
+        var oficinaSeleccionada = document.getElementById('oficina_destino').value;
+        var sinLimiteCheckbox = document.getElementById('sin_limite');
+        var fechaLimiteInput = document.getElementById('fecha_limite');
+        var btnPublicar = document.getElementById('btnPublicarPC');
+        var btnDelegar = document.getElementById('btnGuardarDelegar');
+
+        // Lógica principal: La Oficina de Destino decide qué botón se activa
+        if (oficinaSeleccionada === '0') {
+            // Es "Para Conocimiento"
+            btnPublicar.disabled = false;
+            btnDelegar.disabled = true;
+
+            // Forzar "Sin Límite"
+            sinLimiteCheckbox.checked = true;
+            sinLimiteCheckbox.disabled = true;
+            fechaLimiteInput.disabled = true;
+            fechaLimiteInput.value = '';
+            fechaLimiteInput.required = false;
+
+        } else if (oficinaSeleccionada === '') {
+            // No se ha seleccionado nada
+            btnPublicar.disabled = true;
+            btnDelegar.disabled = true;
+            sinLimiteCheckbox.disabled = false;
+
+        } else {
+            // Es una oficina específica
+            btnPublicar.disabled = true;
+            btnDelegar.disabled = false;
+            sinLimiteCheckbox.disabled = false;
+            fechaLimiteInput.required = true;
+        }
+
+        // Lógica secundaria: El checkbox "Sin Límite" controla la fecha
+        if (oficinaSeleccionada !== '0') {
+             fechaLimiteInput.disabled = sinLimiteCheckbox.checked;
+             if (sinLimiteCheckbox.checked) {
+                fechaLimiteInput.value = '';
+                fechaLimiteInput.required = false;
+             } else {
+                fechaLimiteInput.required = true;
+             }
+        }
+    }
+
+    // Función para quitar el archivo seleccionado
+    function quitarArchivo() {
+        var inputArchivo = document.getElementById('archivo_adjunto');
+        inputArchivo.value = '';
+        document.getElementById('previsualizadorPDF').src = '';
+        document.getElementById('btnQuitarArchivo').style.display = 'none';
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         cargarHojasRuta();
+
         // Abrir modal
         document.getElementById('btnNuevaHoja').addEventListener('click', function() {
             if (!oficinasYaCargadas) {
                 cargarOficinas();
                 oficinasYaCargadas = true;
             }
-            cargarNumeroRegistro(); // Mover esta línea FUERA del if
+            // Limpiar y resetear formulario
+            document.getElementById('formNuevaHojaRuta').reset();
+            quitarArchivo();
+
+            cargarNumeroRegistro();
             document.getElementById('fecha_recepcion').valueAsDate = new Date();
+
+            // Resetear la lógica del modal
+            actualizarEstadoModal();
+
             var modal = new bootstrap.Modal(document.getElementById('modalNuevaHojaRuta'));
             modal.show();
         });
+
+        // Event listeners para las validaciones
+        document.getElementById('oficina_destino').addEventListener('change', actualizarEstadoModal);
+        document.getElementById('sin_limite').addEventListener('change', actualizarEstadoModal);
     });
     // Cargar oficinas
     function cargarOficinas() {
@@ -241,7 +324,8 @@
             .then(response => response.json())
             .then(data => {
                 var select = document.getElementById('oficina_destino');
-                select.innerHTML = '<option value="">Seleccione oficina...</option>'; // Limpiar primero
+                // Mantener las primeras dos opciones y limpiar el resto
+                select.options.length = 2; // Mantiene "Seleccione oficina..." y "Todas las Oficinas"
                 data.forEach(oficina => {
                     var option = document.createElement('option');
                     option.value = oficina.id;
@@ -353,8 +437,11 @@
         if (archivo && archivo.type === 'application/pdf') {
             var url = URL.createObjectURL(archivo);
             document.getElementById('previsualizadorPDF').src = url;
+            // Mostrar botón para quitar archivo
+            document.getElementById('btnQuitarArchivo').style.display = 'inline-block';
         } else {
             document.getElementById('previsualizadorPDF').src = '';
+            document.getElementById('btnQuitarArchivo').style.display = 'none';
             if (archivo) {
                 alertaPersonalizada('warning', 'Solo se permiten archivos PDF');
                 document.getElementById('archivo_adjunto').value = '';
