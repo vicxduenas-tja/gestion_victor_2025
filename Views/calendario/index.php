@@ -2,6 +2,8 @@
 
 <!-- CSS de FullCalendar -->
 <link href='https://cdn.jsdelivr.net/npm/fullcalendar@5.11.3/main.min.css' rel='stylesheet' />
+<!-- CSS de Animate.css para animaciones -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css" />
 
 <style>
     /* Estilos mínimos para el stepper de Bootstrap */
@@ -434,6 +436,9 @@
 
         window.calendar.render();
         console.log('Calendario listo');
+
+        // Cargar notificaciones al iniciar
+        cargarNotificaciones();
     });
 
     function obtenerColor(prioridad, estado) {
@@ -828,6 +833,83 @@
         document.getElementById('infoArchivo').style.display = 'none';
         document.getElementById('previewPDF').style.display = 'none';
         document.getElementById('btnQuitarArchivo').style.display = 'none';
+    }
+
+    /**
+     * Busca y muestra notificaciones pendientes una por una con SweetAlert2
+     * Incluye animaciones de Animate.css e iconos animados
+     */
+    async function cargarNotificaciones() {
+        try {
+            const response = await fetch('<?php echo BASE_URL; ?>calendario/listarNotificaciones');
+            const notificaciones = await response.json();
+
+            if (notificaciones.length === 0) {
+                return; // No hay nada que mostrar
+            }
+
+            // Mostrar cada notificación una por una
+            for (const doc of notificaciones) {
+
+                let titulo = (doc.estado === 'conocimiento') ? 'Nuevo Documento (P.Conocimiento)' : 'Nueva Tarea Delegada';
+
+                // Iconos animados con FontAwesome y Animate.css
+                let htmlIcono = (doc.estado === 'conocimiento')
+                    ? `<i class="fas fa-envelope fa-2x animate__animated animate__tada" style="color: #0dcaf0; --animate-duration: 2s;"></i>`
+                    : `<i class="fas fa-file-alt fa-2x animate__animated animate__tada" style="color: #ffc107; --animate-duration: 2s;"></i>`;
+
+                let html = `<b>Asunto:</b> ${doc.asunto}<br>`;
+                if (doc.estado === 'conocimiento') {
+                    html += `<small>Publicado: ${doc.fecha_recepcion}</small>`;
+                } else {
+                    if (doc.sin_limite == '0' && doc.fecha_limite) {
+                         html += `<b style="color: #dc3545;">Fecha Límite: ${doc.fecha_limite}</b>`;
+                    }
+                }
+
+                await Swal.fire({
+                    title: titulo,
+                    html: html,
+                    iconHtml: htmlIcono,
+                    confirmButtonText: 'Aceptar',
+                    showClass: { popup: 'animate__animated animate__fadeInUp animate__faster' },
+                    hideClass: { popup: 'animate__animated animate__fadeOutDown animate__faster' },
+
+                    preConfirm: () => {
+                        return fetch('<?php echo BASE_URL; ?>calendario/registrarVisualizacion', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+                            body: 'id=' + doc.id
+                        })
+                        .then(response => response.json())
+                        .then(data => {
+                            if (data.tipo !== 'success' && data.tipo !== 'info') {
+                                Swal.showValidationMessage('Error al marcar como visto');
+                            }
+                            return data;
+                        })
+                        .catch(error => Swal.showValidationMessage('Error de red'));
+                    }
+                });
+            }
+
+            // Al terminar todas las notificaciones
+            Swal.fire({
+                title: '¡Todo listo!',
+                text: 'Viste todas las notificaciones.',
+                icon: 'success',
+                showConfirmButton: false,
+                timer: 1500,
+                showClass: { popup: 'animate__animated animate__fadeIn animate__faster' },
+                hideClass: { popup: 'animate__animated animate__fadeOut animate__faster' }
+            });
+
+            // Recargar eventos del calendario
+            window.calendar.refetchEvents();
+
+        } catch (error) {
+            console.error("Error al cargar notificaciones:", error);
+        }
     }
 </script>
 

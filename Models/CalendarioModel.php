@@ -130,9 +130,39 @@ class CalendarioModel extends Query
 
     public function registrarArchivoRespondido($id_carpeta, $nombre_archivo, $id_usuario)
     {
-        $sql = "INSERT INTO archivos (nombre, id_carpeta, id_usuario) 
+        $sql = "INSERT INTO archivos (nombre, id_carpeta, id_usuario)
             VALUES (?, ?, ?)";
         $datos = array($nombre_archivo, $id_carpeta, $id_usuario);
         return $this->insertar($sql, $datos);
+    }
+
+    /**
+     * Obtiene solo las notificaciones "no vistas" para el usuario.
+     * Incluye tareas delegadas y documentos para conocimiento sin visualizar
+     */
+    public function getNotificaciones($id_usuario, $id_oficina)
+    {
+        // Obtener rol del usuario
+        $sqlRol = "SELECT rol FROM usuarios WHERE id = $id_usuario";
+        $usuario = $this->select($sqlRol);
+
+        if ($usuario['rol'] == 1) {
+            // ADMIN: Ve todas las notificaciones
+            $sql = "SELECT id, numero_documento, asunto, fecha_recepcion, fecha_limite, estado, sin_limite
+                    FROM documentos_oficiales
+                    WHERE fecha_visualizado IS NULL
+                    AND estado IN ('delegado', 'conocimiento')
+                    ORDER BY fecha_recepcion ASC";
+        } else {
+            // USUARIO: Solo ve notificaciones de su oficina
+            $sql = "SELECT id, numero_documento, asunto, fecha_recepcion, fecha_limite, estado, sin_limite
+                    FROM documentos_oficiales
+                    WHERE fecha_visualizado IS NULL
+                    AND (id_oficina_destino = $id_oficina OR estado = 'conocimiento')
+                    AND estado IN ('delegado', 'conocimiento')
+                    ORDER BY fecha_recepcion ASC";
+        }
+
+        return $this->selectAll($sql);
     }
 }

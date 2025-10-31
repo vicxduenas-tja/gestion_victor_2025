@@ -2,10 +2,18 @@
 class Calendario extends Controller
 {
     private $id_usuario;
+    private $id_oficina;
+    private $rol;
 
     public function __construct()
     {
-        parent::__construct();
+        // Carga manual de dependencias (evita errores de orden)
+        $this->views = new Views();
+        require_once 'Config/App/Conexion.php';
+        require_once 'Config/App/Query.php';
+        require_once 'Models/CalendarioModel.php';
+        $this->model = new CalendarioModel();
+
         session_start();
 
         // Validar sesión
@@ -15,6 +23,8 @@ class Calendario extends Controller
         }
 
         $this->id_usuario = $_SESSION['id'];
+        $this->id_oficina = $_SESSION['id_oficina'] ?? null;
+        $this->rol = $_SESSION['rol'];
     }
 
     // Vista principal del calendario
@@ -204,5 +214,16 @@ class Calendario extends Controller
         } else {
             echo json_encode(['archivo' => false]);
         }
+    }
+
+    /**
+     * Devuelve una lista de tareas y P.C. que no han sido visualizados
+     * Usado para el sistema de notificaciones
+     */
+    public function listarNotificaciones()
+    {
+        $data = $this->model->getNotificaciones($this->id_usuario, $this->id_oficina);
+        echo json_encode($data);
+        die();
     }
 }
