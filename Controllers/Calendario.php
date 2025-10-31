@@ -124,8 +124,39 @@ class Calendario extends Controller
                 die();
             }
 
-            // Generar nombre único para archivo de respuesta
-            $nombreRespuesta = 'RESP_' . $documento['numero_documento'] . '.pdf';
+            // ========================================
+            // CORRECCIÓN 1: DETECTAR SI HAY RETRASO
+            // ========================================
+            $enRetraso = false;
+            if (!empty($documento['fecha_limite']) && $documento['sin_limite'] == 0) {
+                $fechaLimite = strtotime($documento['fecha_limite']);
+                $ahora = time();
+                $enRetraso = ($ahora > $fechaLimite);
+            }
+
+            // ========================================
+            // CORRECCIÓN 2: GENERAR NOMBRE CORRECTO
+            // Formato: RES-Asunto_Limpio-ABREV-001.pdf
+            // ========================================
+            // Obtener datos de oficina y usuario
+            $sqlUsuario = "SELECT id_oficina FROM usuarios WHERE id = {$this->id_usuario}";
+            $usuario = $this->model->select($sqlUsuario);
+
+            $sqlOficina = "SELECT abreviatura FROM oficinas WHERE id = {$usuario['id_oficina']}";
+            $oficina = $this->model->select($sqlOficina);
+            $abrev = $oficina['abreviatura'] ?? 'SIN';
+
+            // Limpiar asunto (quitar caracteres especiales, máximo 30 caracteres)
+            $asuntoLimpio = preg_replace('/[^A-Za-z0-9_-]/', '_', $documento['asunto']);
+            $asuntoLimpio = substr($asuntoLimpio, 0, 30);
+
+            // Generar número correlativo por oficina
+            $sqlCount = "SELECT COUNT(*) as total FROM documentos_respondidos
+                         WHERE id_oficina_respondio = {$usuario['id_oficina']}";
+            $count = $this->model->select($sqlCount);
+            $numero = str_pad(($count['total'] ?? 0) + 1, 3, '0', STR_PAD_LEFT);
+
+            $nombreRespuesta = "RES-{$asuntoLimpio}-{$abrev}-{$numero}.pdf";
 
             // Rutas
             $rutaEnProceso = 'Assets/documentos_oficiales/en_proceso/';
@@ -137,14 +168,12 @@ class Calendario extends Controller
             }
 
             // 1. Mover archivo original de en_proceso a completados
-            $archivoOriginal = $rutaEnProceso . $documento['numero_documento'] . '.pdf';
-            $archivoDestino = $rutaCompletados . $documento['numero_documento'] . '.pdf';
+            $archivoOriginal = $rutaEnProceso . 'HR-' . str_pad($documento['numero_documento'], 3, '0', STR_PAD_LEFT) . '.pdf';
+            $archivoDestino = $rutaCompletados . 'HR-' . str_pad($documento['numero_documento'], 3, '0', STR_PAD_LEFT) . '.pdf';
 
             if (file_exists($archivoOriginal)) {
                 if (!rename($archivoOriginal, $archivoDestino)) {
-                    $res = array('tipo' => 'error', 'mensaje' => 'Error al mover archivo original');
-                    echo json_encode($res);
-                    die();
+                    // Si falla el rename, continuar (puede que ya esté movido)
                 }
             }
 
@@ -158,7 +187,7 @@ class Calendario extends Controller
 
             // 3. Si se archiva, copiar a carpeta "Respondidos" del usuario
             if ($archivar == '1') {
-                $id_carpeta_respondidos = $this->model->obtenerCarpetaRespondidos($_SESSION['id']);
+                $id_carpeta_respondidos = $this->model->obtenerCarpetaRespondidos($this->id_usuario);
 
                 if ($id_carpeta_respondidos) {
                     // Ruta de la carpeta en Adm. de Archivos
@@ -173,21 +202,62 @@ class Calendario extends Controller
                     copy($rutaRespuesta, $rutaArchivosCarpeta . $nombreRespuesta);
 
                     // Registrar en la tabla archivos
-                    $this->model->registrarArchivoRespondido($id_carpeta_respondidos, $nombreRespuesta, $_SESSION['id']);
+                    $this->model->registrarArchivoRespondido($id_carpeta_respondidos, $nombreRespuesta, $this->id_usuario);
                 }
             }
 
-            // 4. Actualizar estado en BD
-            $estado_final = $archivar == '1' ? 'archivado' : 'completado';
-            $data = $this->model->completarTarea($id_documento, $nombreRespuesta, $comentarios, $_SESSION['id'], $estado_final);
+            // ========================================
+            // CORRECCIÓN 3: ESTADO SEGÚN RETRASO
+            // ========================================
+            $estado_final = $enRetraso ? 'respondido_retraso' : 'completado';
 
-            if ($data == 1) {
-                $mensaje = $archivar == '1' ? 'Tarea completada y archivada en Respondidos' : 'Tarea completada exitosamente';
-                $res = array('tipo' => 'success', 'mensaje' => $mensaje);
-            } else {
+            // 4. Actualizar estado en documentos_oficiales
+            $data = $this->model->completarTarea($id_documento, $nombreRespuesta, $comentarios, $this->id_usuario, $estado_final);
+
+            if ($data != 1) {
                 $res = array('tipo' => 'error', 'mensaje' => 'Error al actualizar el estado');
+                echo json_encode($res);
+                die();
             }
 
+            // ========================================
+            // CORRECCIÓN 4: REGISTRAR EN documentos_respondidos
+            // ========================================
+            $sqlInsertResp = "INSERT INTO documentos_respondidos
+                              (id_documento, archivo_respuesta, id_oficina_respondio,
+                               id_usuario_respondio, fecha_respuesta, observaciones)
+                              VALUES (?, ?, ?, ?, NOW(), ?)";
+
+            $datosResp = array(
+                $id_documento,
+                $nombreRespuesta,
+                $usuario['id_oficina'],
+                $this->id_usuario,
+                $comentarios
+            );
+
+            $this->model->insertar($sqlInsertResp, $datosResp);
+
+            // ========================================
+            // CORRECCIÓN 5: ACTUALIZAR hojas_ruta SI SE ARCHIVA
+            // ========================================
+            if ($archivar == '1') {
+                $sqlUpdateHR = "UPDATE hojas_ruta
+                                SET estado = 'archivado', fecha_completado = NOW()
+                                WHERE numero_registro = ?";
+                $this->model->save($sqlUpdateHR, array($documento['numero_documento']));
+            }
+
+            // Respuesta exitosa
+            $mensaje = $archivar == '1'
+                ? 'Tarea completada y archivada en Respondidos'
+                : 'Tarea completada exitosamente';
+
+            if ($enRetraso) {
+                $mensaje .= ' (Registrada con retraso)';
+            }
+
+            $res = array('tipo' => 'success', 'mensaje' => $mensaje);
             echo json_encode($res);
             die();
         }

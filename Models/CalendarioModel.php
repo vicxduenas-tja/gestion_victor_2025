@@ -57,13 +57,31 @@ class CalendarioModel extends Query
         return $this->selectAll($sql);
     }
 
-    // Contar documentos pendientes
-    public function contarPendientes($id_usuario)
+    // Contar documentos pendientes (delegados + conocimiento)
+    public function contarPendientes($id_usuario, $rol = null, $id_oficina = null)
     {
-        $sql = "SELECT COUNT(*) as total
-                FROM documentos_oficiales 
-                WHERE id_usuario_asignado = $id_usuario 
-                AND estado = 'pendiente'";
+        // Si no se pasa rol, obtenerlo del usuario
+        if ($rol === null) {
+            $sqlUsuario = "SELECT rol, id_oficina FROM usuarios WHERE id = $id_usuario";
+            $usuario = $this->select($sqlUsuario);
+            $rol = $usuario['rol'];
+            $id_oficina = $usuario['id_oficina'];
+        }
+
+        if ($rol == 1) {
+            // ADMIN: Ve TODOS los documentos delegados
+            $sql = "SELECT COUNT(*) as total
+                    FROM documentos_oficiales
+                    WHERE estado = 'delegado'";
+        } else {
+            // USUARIO: Ve delegados de su oficina + documentos para conocimiento
+            $sql = "SELECT
+                        (SELECT COUNT(*) FROM documentos_oficiales
+                         WHERE id_oficina_destino = $id_oficina AND estado = 'delegado') +
+                        (SELECT COUNT(*) FROM hojas_ruta
+                         WHERE estado = 'conocimiento')
+                    AS total";
+        }
 
         $resultado = $this->select($sql);
         return $resultado['total'];
