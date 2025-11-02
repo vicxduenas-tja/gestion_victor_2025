@@ -13,8 +13,8 @@ class CalendarioModel extends Query
         $usuario = $this->select($sqlRol);
 
         if ($usuario['rol'] == 1) {
-            // SUPER ADMIN: Ve TODAS las tareas
-            $sql = "SELECT 
+            // SUPER ADMIN: Ve TODAS las tareas delegadas + documentos de conocimiento
+            $sql = "SELECT
                 d.id,
                 d.numero_documento,
                 d.asunto,
@@ -24,16 +24,39 @@ class CalendarioModel extends Query
                 d.prioridad,
                 d.estado,
                 c.nombre as carpeta,
-                COALESCE(CONCAT(u.nombre, ' ', u.apellido), o.nombre) as usuario_asignado
+                COALESCE(CONCAT(u.nombre, ' ', u.apellido), o.nombre) as usuario_asignado,
+                'tarea' as tipo_documento
             FROM documentos_oficiales d
             LEFT JOIN carpetas c ON d.id_carpeta = c.id
             LEFT JOIN usuarios u ON d.id_usuario_asignado = u.id
             LEFT JOIN oficinas o ON d.id_oficina_destino = o.id
             WHERE d.estado IN ('delegado', 'en_progreso', 'respondiendo', 'completado', 'archivado')
-            ORDER BY d.fecha_limite ASC";
+
+            UNION
+
+            SELECT
+                hr.id,
+                hr.numero_registro as numero_documento,
+                hr.asunto,
+                hr.fecha_recepcion,
+                hr.fecha_limite,
+                NULL as fecha_completado,
+                hr.prioridad,
+                hr.estado,
+                'Conocimiento' as carpeta,
+                CASE
+                    WHEN hr.id_oficina_destino = 0 THEN 'TODAS LAS OFICINAS'
+                    ELSE o.nombre
+                END as usuario_asignado,
+                'conocimiento' as tipo_documento
+            FROM hojas_ruta hr
+            LEFT JOIN oficinas o ON hr.id_oficina_destino = o.id
+            WHERE hr.estado = 'conocimiento'
+
+            ORDER BY fecha_limite ASC";
         } else {
-            // USUARIO: Ve solo tareas de SU oficina
-            $sql = "SELECT 
+            // USUARIO: Ve tareas de SU oficina + documentos de conocimiento (TODAS o su oficina)
+            $sql = "SELECT
                 d.id,
                 d.numero_documento,
                 d.asunto,
@@ -41,17 +64,41 @@ class CalendarioModel extends Query
                 d.fecha_limite,
                 d.fecha_completado,
                 d.prioridad,
-                d.estado,  
+                d.estado,
                 c.nombre as carpeta,
-                COALESCE(CONCAT(u.nombre, ' ', u.apellido), o.nombre) as usuario_asignado
+                COALESCE(CONCAT(u.nombre, ' ', u.apellido), o.nombre) as usuario_asignado,
+                'tarea' as tipo_documento
             FROM documentos_oficiales d
             LEFT JOIN carpetas c ON d.id_carpeta = c.id
             LEFT JOIN usuarios u ON d.id_usuario_asignado = u.id
             LEFT JOIN oficinas o ON d.id_oficina_destino = o.id
-            WHERE (d.id_usuario_asignado = $id_usuario 
+            WHERE (d.id_usuario_asignado = $id_usuario
                    OR d.id_oficina_destino = {$usuario['id_oficina']})
             AND d.estado IN ('delegado', 'en_progreso', 'respondiendo', 'completado', 'archivado')
-            ORDER BY d.fecha_limite ASC";
+
+            UNION
+
+            SELECT
+                hr.id,
+                hr.numero_registro as numero_documento,
+                hr.asunto,
+                hr.fecha_recepcion,
+                hr.fecha_limite,
+                NULL as fecha_completado,
+                hr.prioridad,
+                hr.estado,
+                'Conocimiento' as carpeta,
+                CASE
+                    WHEN hr.id_oficina_destino = 0 THEN 'TODAS LAS OFICINAS'
+                    ELSE o.nombre
+                END as usuario_asignado,
+                'conocimiento' as tipo_documento
+            FROM hojas_ruta hr
+            LEFT JOIN oficinas o ON hr.id_oficina_destino = o.id
+            WHERE hr.estado = 'conocimiento'
+            AND (hr.id_oficina_destino = 0 OR hr.id_oficina_destino = {$usuario['id_oficina']})
+
+            ORDER BY fecha_limite ASC";
         }
 
         return $this->selectAll($sql);
@@ -69,17 +116,21 @@ class CalendarioModel extends Query
         }
 
         if ($rol == 1) {
-            // ADMIN: Ve TODOS los documentos delegados
-            $sql = "SELECT COUNT(*) as total
-                    FROM documentos_oficiales
-                    WHERE estado = 'delegado'";
+            // ADMIN: Ve TODOS los documentos delegados + conocimiento
+            $sql = "SELECT
+                        (SELECT COUNT(*) FROM documentos_oficiales
+                         WHERE estado = 'delegado') +
+                        (SELECT COUNT(*) FROM hojas_ruta
+                         WHERE estado = 'conocimiento')
+                    AS total";
         } else {
-            // USUARIO: Ve delegados de su oficina + documentos para conocimiento
+            // USUARIO: Ve delegados de su oficina + documentos para conocimiento (TODAS o su oficina)
             $sql = "SELECT
                         (SELECT COUNT(*) FROM documentos_oficiales
                          WHERE id_oficina_destino = $id_oficina AND estado = 'delegado') +
                         (SELECT COUNT(*) FROM hojas_ruta
-                         WHERE estado = 'conocimiento')
+                         WHERE estado = 'conocimiento'
+                         AND (id_oficina_destino = 0 OR id_oficina_destino = $id_oficina))
                     AS total";
         }
 

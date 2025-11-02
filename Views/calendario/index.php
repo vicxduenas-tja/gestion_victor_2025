@@ -371,6 +371,93 @@
             </div>
         </div>
     </div>
+
+    <!-- MODAL 3: Ver Documento Para Conocimiento (Solo Lectura) -->
+    <div class="modal fade" id="modalConocimiento" tabindex="-1">
+        <div class="modal-dialog modal-xl">
+            <div class="modal-content">
+                <div class="modal-header bg-info text-white">
+                    <h5 class="modal-title">
+                        <i class="fas fa-info-circle"></i> Documento Para Conocimiento
+                    </h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <!-- Columna Izquierda: Información del Documento -->
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title text-primary mb-3">
+                                        <i class="fas fa-file-alt"></i> Información del Documento
+                                    </h6>
+
+                                    <table class="table table-sm table-borderless">
+                                        <tr>
+                                            <td width="40%"><strong>N° Registro:</strong></td>
+                                            <td id="conoc_numero"></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Fecha Recepción:</strong></td>
+                                            <td id="conoc_fecha"></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Remitente:</strong></td>
+                                            <td id="conoc_remitente"></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Prioridad:</strong></td>
+                                            <td><span id="conoc_prioridad" class="badge"></span></td>
+                                        </tr>
+                                        <tr>
+                                            <td><strong>Destino:</strong></td>
+                                            <td id="conoc_destino" class="text-muted small"></td>
+                                        </tr>
+                                    </table>
+
+                                    <hr>
+
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-align-left"></i> Asunto:</strong>
+                                        <div id="conoc_asunto" class="p-2 bg-light rounded mt-2" style="max-height: 100px; overflow-y: auto;"></div>
+                                    </div>
+
+                                    <div class="mb-3">
+                                        <strong><i class="fas fa-comment"></i> Observaciones:</strong>
+                                        <div id="conoc_observaciones" class="p-2 bg-light rounded mt-2 text-muted" style="max-height: 80px; overflow-y: auto;"></div>
+                                    </div>
+
+                                    <div class="alert alert-info mt-3">
+                                        <i class="fas fa-info-circle"></i> Este documento es solo para conocimiento. No requiere respuesta.
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Columna Derecha: Visor de PDF -->
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h6 class="card-title text-center mb-3">
+                                        <i class="fas fa-file-pdf"></i> Documento Adjunto
+                                    </h6>
+                                    <iframe id="conoc_visor_pdf" style="width: 100%; height: 600px; border: 1px solid #ddd; border-radius: 4px;"></iframe>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <a id="conoc_btn_descargar" href="#" download class="btn btn-primary">
+                        <i class="fas fa-download"></i> Descargar PDF
+                    </a>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                        <i class="fas fa-times"></i> Cerrar
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 
 <!-- JS de FullCalendar -->
@@ -418,7 +505,8 @@
                                     carpeta: doc.carpeta,
                                     fecha_completado: doc.fecha_completado,
                                     fecha_recepcion: doc.fecha_recepcion,
-                                    archivo_adjunto: doc.archivo_adjunto
+                                    archivo_adjunto: doc.archivo_adjunto,
+                                    tipo_documento: doc.tipo_documento || 'tarea'
                                 }
                             };
                         });
@@ -556,8 +644,13 @@
     window.idDocumentoActual = 0;
 
     // Mostrar detalle del documento (MODAL 1)
-    // Mostrar detalle del documento (MODAL 1)
     function mostrarDetalleDocumento(evento) {
+        // Si es documento de conocimiento, abrir modal especial
+        if (evento.extendedProps.tipo_documento === 'conocimiento') {
+            mostrarDocumentoConocimiento(evento.id);
+            return;
+        }
+
         window.idDocumentoActual = evento.id;
 
         // Extraer número y asunto
@@ -657,6 +750,47 @@
         // Mostrar modal
         var modal = new bootstrap.Modal(document.getElementById('modalVerDetalles'));
         modal.show();
+    }
+
+    // Mostrar documento de conocimiento (MODAL 3)
+    function mostrarDocumentoConocimiento(id) {
+        fetch('<?php echo BASE_URL; ?>calendario/obtenerDocumentoConocimiento/' + id)
+            .then(response => response.json())
+            .then(data => {
+                // Llenar información
+                document.getElementById('conoc_numero').textContent = data.numero_registro;
+                document.getElementById('conoc_fecha').textContent = data.fecha_recepcion;
+                document.getElementById('conoc_remitente').textContent = data.remitente || 'No especificado';
+                document.getElementById('conoc_asunto').textContent = data.asunto;
+                document.getElementById('conoc_observaciones').textContent = data.observaciones || 'Sin observaciones';
+                document.getElementById('conoc_destino').textContent = data.oficina_destino;
+
+                // Badge prioridad
+                var badgePrioridad = document.getElementById('conoc_prioridad');
+                badgePrioridad.textContent = data.prioridad.toUpperCase();
+                badgePrioridad.className = 'badge';
+                if (data.prioridad === 'urgente') badgePrioridad.classList.add('bg-danger');
+                else if (data.prioridad === 'alta') badgePrioridad.classList.add('bg-warning');
+                else if (data.prioridad === 'media') badgePrioridad.classList.add('bg-info');
+                else badgePrioridad.classList.add('bg-secondary');
+
+                // Cargar PDF
+                var rutaPDF = '<?php echo BASE_URL; ?>Assets/documentos_para_conocimiento/' + data.archivo_adjunto + '#zoom=page-fit';
+                document.getElementById('conoc_visor_pdf').src = rutaPDF;
+
+                // Configurar botón de descarga
+                var btnDescargar = document.getElementById('conoc_btn_descargar');
+                btnDescargar.href = '<?php echo BASE_URL; ?>Assets/documentos_para_conocimiento/' + data.archivo_adjunto;
+                btnDescargar.download = data.archivo_adjunto;
+
+                // Mostrar modal
+                var modal = new bootstrap.Modal(document.getElementById('modalConocimiento'));
+                modal.show();
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alertaPersonalizada('error', 'Error al cargar el documento');
+            });
     }
 
     // Actualizar indicador de progreso

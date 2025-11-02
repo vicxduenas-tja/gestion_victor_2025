@@ -226,57 +226,36 @@ class HojaRuta extends Controller
         }
 
         try {
-            // Si es TODAS, guardar para cada oficina
+            // Si es TODAS, usar id_oficina_destino = 0 (significa TODAS)
             if ($oficina_destino === 'TODAS') {
-                $sqlOficinas = "SELECT id FROM oficinas WHERE estado = 1";
-                $oficinas = $this->model->selectAll($sqlOficinas);
-
-                foreach ($oficinas as $oficina) {
-                    // Guardar en hojas_ruta
-                    $sqlHR = "INSERT INTO hojas_ruta
-                            (numero_registro, fecha_recepcion, remitente, asunto, id_oficina_destino,
-                             fecha_limite, prioridad, observaciones, id_usuario_registro, archivo_adjunto, sin_limite, estado)
-                            VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 1, 'conocimiento')";
-
-                    $datosHR = array(
-                        $numero_registro . '-' . $oficina['id'],
-                        $fecha_recepcion,
-                        $remitente,
-                        $asunto,
-                        $oficina['id'],
-                        $prioridad,
-                        $observaciones,
-                        $this->id_usuario,
-                        $archivo_adjunto
-                    );
-
-                    $this->model->insertar($sqlHR, $datosHR);
-                }
-
-                echo json_encode(['tipo' => 'success', 'mensaje' => 'Documento publicado para conocimiento de TODAS las oficinas']);
-            } else {
-                // Guardar solo para una oficina
-                $sqlHR = "INSERT INTO hojas_ruta
-                        (numero_registro, fecha_recepcion, remitente, asunto, id_oficina_destino,
-                         fecha_limite, prioridad, observaciones, id_usuario_registro, archivo_adjunto, sin_limite, estado)
-                        VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 1, 'conocimiento')";
-
-                $datosHR = array(
-                    $numero_registro,
-                    $fecha_recepcion,
-                    $remitente,
-                    $asunto,
-                    $oficina_destino,
-                    $prioridad,
-                    $observaciones,
-                    $this->id_usuario,
-                    $archivo_adjunto
-                );
-
-                $this->model->insertar($sqlHR, $datosHR);
-
-                echo json_encode(['tipo' => 'success', 'mensaje' => 'Documento publicado para conocimiento']);
+                $oficina_destino = 0;
             }
+
+            // Guardar UN SOLO registro en hojas_ruta
+            $sqlHR = "INSERT INTO hojas_ruta
+                    (numero_registro, fecha_recepcion, remitente, asunto, id_oficina_destino,
+                     fecha_limite, prioridad, observaciones, id_usuario_registro, archivo_adjunto, sin_limite, estado)
+                    VALUES (?, ?, ?, ?, ?, NULL, ?, ?, ?, ?, 1, 'conocimiento')";
+
+            $datosHR = array(
+                $numero_registro,
+                $fecha_recepcion,
+                $remitente,
+                $asunto,
+                $oficina_destino,
+                $prioridad,
+                $observaciones,
+                $this->id_usuario,
+                $archivo_adjunto
+            );
+
+            $this->model->insertar($sqlHR, $datosHR);
+
+            $mensaje = ($oficina_destino == 0)
+                ? 'Documento publicado para conocimiento de TODAS las oficinas'
+                : 'Documento publicado para conocimiento';
+
+            echo json_encode(['tipo' => 'success', 'mensaje' => $mensaje]);
         } catch (Exception $e) {
             echo json_encode(['tipo' => 'error', 'mensaje' => 'Error: ' . $e->getMessage()]);
         }

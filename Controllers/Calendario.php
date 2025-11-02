@@ -263,6 +263,31 @@ class Calendario extends Controller
         }
     }
 
+    // Obtener detalles de un documento de conocimiento
+    public function obtenerDocumentoConocimiento($id)
+    {
+        $sql = "SELECT
+                    hr.id,
+                    hr.numero_registro,
+                    hr.fecha_recepcion,
+                    hr.remitente,
+                    hr.asunto,
+                    hr.prioridad,
+                    hr.observaciones,
+                    hr.archivo_adjunto,
+                    hr.id_oficina_destino,
+                    CASE
+                        WHEN hr.id_oficina_destino = 0 THEN 'TODAS LAS OFICINAS'
+                        ELSE o.nombre
+                    END as oficina_destino
+                FROM hojas_ruta hr
+                LEFT JOIN oficinas o ON hr.id_oficina_destino = o.id
+                WHERE hr.id = $id";
+
+        $data = $this->model->select($sql);
+        echo json_encode($data);
+    }
+
     public function buscarArchivoPDF($numero, $carpeta)
     {
         $ruta = 'Assets/documentos_oficiales/' . $carpeta . '/';
