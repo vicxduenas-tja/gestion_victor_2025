@@ -91,6 +91,15 @@
                                 </div>
 
                                 <div class="mb-2">
+                                    <div class="form-check">
+                                        <input class="form-check-input" type="checkbox" id="sin_limite">
+                                        <label class="form-check-label" for="sin_limite">
+                                            Sin Límite (Para Conocimiento)
+                                        </label>
+                                    </div>
+                                </div>
+
+                                <div class="mb-2">
                                     <label class="form-label">Remitente</label>
                                     <input type="text" class="form-control form-control-sm" id="remitente" placeholder="Nombre de quien envía">
                                 </div>
@@ -119,7 +128,12 @@
 
                                 <div class="mb-2">
                                     <label class="form-label">Documento Adjunto (PDF) *</label>
-                                    <input type="file" class="form-control form-control-sm" id="archivo_adjunto" accept=".pdf" required onchange="previsualizarPDF()">
+                                    <div class="input-group input-group-sm">
+                                        <input type="file" class="form-control form-control-sm" id="archivo_adjunto" accept=".pdf" required onchange="previsualizarPDF()">
+                                        <button class="btn btn-outline-danger btn-sm" type="button" onclick="quitarArchivo()" title="Quitar archivo">
+                                            <i class="fas fa-times"></i>
+                                        </button>
+                                    </div>
                                 </div>
 
                                 <div class="mb-2">
@@ -141,8 +155,11 @@
 
                 <div class="modal-footer">
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancelar</button>
-                    <button type="button" class="btn btn-primary" onclick="guardarHojaRuta()">
-                        <i class="fas fa-save"></i> Guardar Hoja de Ruta
+                    <button type="button" class="btn btn-success" id="btnGuardarYDelegar" onclick="guardarYDelegarDirecto()">
+                        <i class="fas fa-paper-plane"></i> Guardar y Delegar
+                    </button>
+                    <button type="button" class="btn btn-info" id="btnPublicarPC" onclick="publicarParaConocimiento()" style="display: none;">
+                        <i class="fas fa-bullhorn"></i> Publicar Para Conocimiento
                     </button>
                 </div>
             </div>
@@ -223,16 +240,55 @@
 
     document.addEventListener('DOMContentLoaded', function() {
         cargarHojasRuta();
+
         // Abrir modal
         document.getElementById('btnNuevaHoja').addEventListener('click', function() {
             if (!oficinasYaCargadas) {
                 cargarOficinas();
                 oficinasYaCargadas = true;
             }
-            cargarNumeroRegistro(); // Mover esta línea FUERA del if
+            cargarNumeroRegistro();
             document.getElementById('fecha_recepcion').valueAsDate = new Date();
             var modal = new bootstrap.Modal(document.getElementById('modalNuevaHojaRuta'));
             modal.show();
+        });
+
+        // Validación del checkbox "Sin Límite"
+        document.getElementById('sin_limite').addEventListener('change', function() {
+            var fechaLimite = document.getElementById('fecha_limite');
+            var btnDelegar = document.getElementById('btnGuardarYDelegar');
+            var btnPC = document.getElementById('btnPublicarPC');
+
+            if (this.checked) {
+                // SIN LÍMITE = PARA CONOCIMIENTO
+                fechaLimite.value = '';
+                fechaLimite.disabled = true;
+                fechaLimite.required = false;
+
+                // Mostrar botón P.C., ocultar Delegar
+                btnDelegar.style.display = 'none';
+                btnPC.style.display = 'inline-block';
+            } else {
+                // CON LÍMITE = TAREA DELEGADA
+                fechaLimite.disabled = false;
+                fechaLimite.required = true;
+
+                // Mostrar botón Delegar, ocultar P.C.
+                btnDelegar.style.display = 'inline-block';
+                btnPC.style.display = 'none';
+            }
+        });
+
+        // Validación de fecha límite (no permitir fechas pasadas)
+        document.getElementById('fecha_limite').addEventListener('change', function() {
+            var fechaSeleccionada = new Date(this.value);
+            var hoy = new Date();
+            hoy.setHours(0, 0, 0, 0);
+
+            if (fechaSeleccionada < hoy) {
+                alertaPersonalizada('warning', 'La fecha límite no puede ser anterior a hoy');
+                this.value = '';
+            }
         });
     });
     // Cargar oficinas
@@ -242,6 +298,13 @@
             .then(data => {
                 var select = document.getElementById('oficina_destino');
                 select.innerHTML = '<option value="">Seleccione oficina...</option>'; // Limpiar primero
+
+                // Agregar opción TODAS para documentos de conocimiento
+                var optionTodas = document.createElement('option');
+                optionTodas.value = 'TODAS';
+                optionTodas.textContent = '▸ TODAS LAS OFICINAS';
+                select.appendChild(optionTodas);
+
                 data.forEach(oficina => {
                     var option = document.createElement('option');
                     option.value = oficina.id;
@@ -264,24 +327,42 @@
             });
     }
 
-// Guardar y delegar hoja de ruta automáticamente
-    function guardarHojaRuta() {
+    // Guardar y delegar (Tarea Normal - CON límite)
+    function guardarYDelegarDirecto() {
+        var oficinaDestino = document.getElementById('oficina_destino').value;
+
+        // VALIDACIÓN: No permitir "TODAS" para tareas delegadas
+        if (oficinaDestino === 'TODAS' || oficinaDestino === '') {
+            alertaPersonalizada('warning', 'Para delegar una tarea debe seleccionar UNA oficina específica (no "TODAS")');
+            return;
+        }
+
+        // Validar campos obligatorios
+        if (!document.getElementById('numero_registro').value ||
+            !document.getElementById('asunto').value ||
+            !document.getElementById('fecha_limite').value) {
+            alertaPersonalizada('warning', 'Complete todos los campos obligatorios');
+            return;
+        }
+
+        // Validar archivo
+        if (!document.getElementById('archivo_adjunto').files[0]) {
+            alertaPersonalizada('warning', 'Debe adjuntar un archivo PDF');
+            return;
+        }
+
         var formData = new FormData();
         formData.append('numero_registro', document.getElementById('numero_registro').value);
         formData.append('fecha_recepcion', document.getElementById('fecha_recepcion').value);
         formData.append('remitente', document.getElementById('remitente').value);
         formData.append('asunto', document.getElementById('asunto').value);
-        formData.append('oficina_destino', document.getElementById('oficina_destino').value);
+        formData.append('oficina_destino', oficinaDestino);
         formData.append('fecha_limite', document.getElementById('fecha_limite').value);
         formData.append('prioridad', document.getElementById('prioridad').value);
         formData.append('observaciones', document.getElementById('observaciones').value);
         formData.append('archivo', document.getElementById('archivo_adjunto').files[0]);
-        
-        if (!document.getElementById('archivo_adjunto').files[0]) {
-            alertaPersonalizada('warning', 'Debe adjuntar un archivo PDF');
-            return;
-        }
-        
+        formData.append('sin_limite', '0'); // Tarea con límite
+
         fetch('<?php echo BASE_URL; ?>hojaruta/guardarYDelegarDirecto', {
             method: 'POST',
             body: formData
@@ -289,12 +370,13 @@
         .then(response => response.json())
         .then(data => {
             alertaPersonalizada(data.tipo, data.mensaje);
-            
+
             if (data.tipo === 'success') {
                 var modal = bootstrap.Modal.getInstance(document.getElementById('modalNuevaHojaRuta'));
                 modal.hide();
                 document.getElementById('formNuevaHojaRuta').reset();
                 document.getElementById('previsualizadorPDF').src = '';
+                document.getElementById('sin_limite').checked = false;
                 cargarHojasRuta();
             }
         })
@@ -302,6 +384,70 @@
             console.error('Error:', error);
             alertaPersonalizada('error', 'Error al guardar');
         });
+    }
+
+    // Publicar Para Conocimiento (SIN límite)
+    function publicarParaConocimiento() {
+        var oficinaDestino = document.getElementById('oficina_destino').value;
+
+        if (oficinaDestino === '') {
+            alertaPersonalizada('warning', 'Debe seleccionar una oficina o "TODAS LAS OFICINAS"');
+            return;
+        }
+
+        // Validar campos obligatorios
+        if (!document.getElementById('numero_registro').value ||
+            !document.getElementById('asunto').value) {
+            alertaPersonalizada('warning', 'Complete todos los campos obligatorios');
+            return;
+        }
+
+        // Validar archivo
+        if (!document.getElementById('archivo_adjunto').files[0]) {
+            alertaPersonalizada('warning', 'Debe adjuntar un archivo PDF');
+            return;
+        }
+
+        var formData = new FormData();
+        formData.append('numero_registro', document.getElementById('numero_registro').value);
+        formData.append('fecha_recepcion', document.getElementById('fecha_recepcion').value);
+        formData.append('remitente', document.getElementById('remitente').value);
+        formData.append('asunto', document.getElementById('asunto').value);
+        formData.append('oficina_destino', oficinaDestino);
+        formData.append('fecha_limite', ''); // Sin límite
+        formData.append('prioridad', document.getElementById('prioridad').value);
+        formData.append('observaciones', document.getElementById('observaciones').value);
+        formData.append('archivo', document.getElementById('archivo_adjunto').files[0]);
+        formData.append('sin_limite', '1'); // Sin límite
+
+        fetch('<?php echo BASE_URL; ?>hojaruta/publicarParaConocimiento', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            alertaPersonalizada(data.tipo, data.mensaje);
+
+            if (data.tipo === 'success') {
+                var modal = bootstrap.Modal.getInstance(document.getElementById('modalNuevaHojaRuta'));
+                modal.hide();
+                document.getElementById('formNuevaHojaRuta').reset();
+                document.getElementById('previsualizadorPDF').src = '';
+                document.getElementById('sin_limite').checked = false;
+                cargarHojasRuta();
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alertaPersonalizada('error', 'Error al guardar');
+        });
+    }
+
+    // Quitar archivo seleccionado
+    function quitarArchivo() {
+        document.getElementById('archivo_adjunto').value = '';
+        document.getElementById('previsualizadorPDF').src = '';
+        alertaPersonalizada('info', 'Archivo removido');
     }
 
     // Cargar lista de hojas de ruta
@@ -352,7 +498,7 @@
 
         if (archivo && archivo.type === 'application/pdf') {
             var url = URL.createObjectURL(archivo);
-            document.getElementById('previsualizadorPDF').src = url;
+            document.getElementById('previsualizadorPDF').src = url + '#zoom=page-fit';
         } else {
             document.getElementById('previsualizadorPDF').src = '';
             if (archivo) {

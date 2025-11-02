@@ -9,9 +9,9 @@ class HojaRutaModel extends Query
     // Obtener todas las oficinas activas
     public function getOficinas()
     {
-        $sql = "SELECT id, nombre, siglas 
-                FROM oficinas 
-                WHERE estado = 1 
+        $sql = "SELECT id, nombre, abreviatura
+                FROM oficinas
+                WHERE estado = 1
                 ORDER BY nombre";
         return $this->selectAll($sql);
     }
